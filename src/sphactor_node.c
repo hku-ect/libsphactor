@@ -198,6 +198,11 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zsock_send(self->pipe, "U", self->uuid);
     }
     else
+    if (streq (command, "NAME"))
+    {
+        zstr_send ( self->pipe, self->name );
+    }
+    else
     if (streq (command, "VERBOSE"))
         self->verbose = true;
     else
@@ -259,7 +264,23 @@ sphactor_node_test (bool verbose)
     //  Simple create/destroy test
     zactor_t *sphactor_node = zactor_new (sphactor_node_actor, NULL);
     assert (sphactor_node);
+    // acquire the uuid
+    zstr_send(sphactor_node, "UUID");
+    zuuid_t *uuid = zuuid_new();
+    int rc = zsock_recv( sphactor_node, "U", &uuid );
+    assert ( rc==0 );
+    assert ( uuid );
 
+    // acquire the name
+    zstr_send(sphactor_node, "NAME");
+    char *name = zstr_recv(sphactor_node);
+    // test if the name matches the first 6 chars
+    char *name2 = (char *) zmalloc (7);
+    memcpy (name2, zuuid_str(uuid), 6);
+    assert( streq ( name, name2 ));
+
+    zuuid_destroy(&uuid);
+    zstr_free(&name2);
     zactor_destroy (&sphactor_node);
     //  @end
 
