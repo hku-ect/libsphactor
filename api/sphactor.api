@@ -11,7 +11,7 @@
 
     <method name = "uuid">
         Return our sphactor's UUID string, after successful initialization
-        <return type = "string" />
+        <return type = "zuuid" />
     </method>
 
     <method name = "name">

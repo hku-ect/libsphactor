@@ -193,6 +193,11 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_sendf (self->pipe, "%i", rc);
     }
     else
+    if (streq (command, "UUID"))
+    {
+        zsock_send(self->pipe, "U", self->uuid);
+    }
+    else
     if (streq (command, "VERBOSE"))
         self->verbose = true;
     else

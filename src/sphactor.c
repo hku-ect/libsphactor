@@ -26,7 +26,7 @@
 struct _sphactor_t {
     zactor_t *actor;            //  A Sphactor instance wraps a zactor
     char    *name;              //  Copy of our node's name
-    char    *uuid;              //  Copy of our node's uuid
+    zuuid_t *uuid;              //  Copy of our node's uuid
     char    *endpoint;          //  Copy of our node's endpoint
     zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
 };
@@ -41,6 +41,9 @@ sphactor_new (const char *name, zuuid_t *uuid)
 {
     sphactor_t *self = (sphactor_t *) zmalloc (sizeof (sphactor_t));
     assert (self);
+
+    if (uuid)
+        self->uuid = zuuid_dup(uuid);
 
     self->actor = zactor_new( sphactor_node_actor, uuid);
 
@@ -63,13 +66,18 @@ sphactor_destroy (sphactor_t **self_p)
     if (*self_p) {
         sphactor_t *self = *self_p;
         //  Free class properties here
+        zactor_destroy (&self->actor);
+        zstr_free( &self->name);
+        if (self->uuid) zuuid_destroy(&self->uuid);
+        zstr_free(&self->endpoint);
         //  Free object itself
+
         free (self);
         *self_p = NULL;
     }
 }
 
-const char *
+const zuuid_t *
 sphactor_uuid (sphactor_t *self)
 {
     assert(self);
@@ -78,7 +86,10 @@ sphactor_uuid (sphactor_t *self)
         // I'm not sure if this is safe if there's already a queue
         // on the actor's pipe???
         zstr_send(self->actor, "UUID");
-        self->uuid = zstr_recv( self->actor );
+        self->uuid = zuuid_new(); // or just malloc it?
+        int rc = zsock_recv( self->actor, "U", self->uuid );
+        assert ( rc==0 );
+        assert ( self->uuid );
     }
     return self->uuid;
 }
@@ -111,7 +122,6 @@ sphactor_set_verbose (sphactor_t *self, bool on)
     zstr_sendf( self->actor, "%d", on);
 }
 
-
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
@@ -137,6 +147,8 @@ sphactor_test (bool verbose)
     //  Simple create/destroy test
     sphactor_t *self = sphactor_new (NULL, NULL);
     assert (self);
+    zuuid_t *uuid = sphactor_uuid(self);
+    assert(uuid);
     sphactor_destroy (&self);
     //  @end
     printf ("OK\n");
