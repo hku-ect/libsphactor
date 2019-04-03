@@ -69,6 +69,49 @@ sphactor_destroy (sphactor_t **self_p)
     }
 }
 
+const char *
+sphactor_uuid (sphactor_t *self)
+{
+    assert(self);
+    if (self->uuid == NULL )
+    {
+        // I'm not sure if this is safe if there's already a queue
+        // on the actor's pipe???
+        zstr_send(self->actor, "UUID");
+        self->uuid = zstr_recv( self->actor );
+    }
+    return self->uuid;
+}
+
+const char *
+sphactor_name (sphactor_t *self)
+{
+    assert(self);
+    if ( self->name == NULL )
+    {
+        zstr_send(self->actor, "NAME");
+        self->name = zstr_recv( self->actor );
+    }
+    return self->name;
+}
+
+void
+sphactor_set_name (sphactor_t *self, const char *name)
+{
+    assert (self);
+    assert (name);
+    zstr_sendx (self->actor, "SET NAME", name, NULL);
+}
+
+void
+sphactor_set_verbose (sphactor_t *self, bool on)
+{
+    assert (self);
+    zstr_sendm (self->actor, "SET VERBOSE");
+    zstr_sendf( self->actor, "%d", on);
+}
+
+
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
