@@ -231,8 +231,8 @@ sphactor_test (bool verbose)
     assert (pub);
     assert (sub);
     //  get endpoints
-    char *pendp = sphactor_endpoint(pub);
-    char *sendp = sphactor_endpoint(sub);
+    const char *pendp = sphactor_endpoint(pub);
+    const char *sendp = sphactor_endpoint(sub);
     zuuid_t *puuid = sphactor_uuid(pub);
     zuuid_t *suuid = sphactor_uuid(sub);
     char *endpointest = (char *)malloc( (9 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );

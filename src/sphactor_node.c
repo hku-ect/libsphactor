@@ -145,10 +145,9 @@ sphactor_node_connect (sphactor_node_t *self, const char *dest)
     assert ( self);
     assert ( dest );
     char topic[2] = "";
-    //  TODO: determnine transport
     zsock_t *sub = sphactor_node_require_transport(self, dest);
     assert( sub );
-    int rc = zsock_connect(sub, dest);
+    int rc = zsock_connect(sub, "%s", dest);
     assert(rc == 0);
     zsock_set_subscribe(sub, topic);
     return rc;
@@ -163,9 +162,10 @@ sphactor_node_disconnect (sphactor_node_t *self, char *dest)
 {
     assert (self);
     //  request sub socket to disconnect, this will create the socket if it doesn't exist
-    zsock_t *sub = sphactor_node_require_transport(self, dest);
-    assert( sub );
-    int rc = zsock_disconnect(sub, dest);
+    zsock_t *sub = sphactor_node_require_transport (self, dest);
+    assert ( sub );
+    int rc = zsock_disconnect (sub, "%s", dest);
+    assert ( rc == 0 );
     return 0;
 }
 
