@@ -203,6 +203,11 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_send ( self->pipe, self->name );
     }
     else
+    if (streq (command, "ENDPOINT"))
+    {
+        zstr_send ( self->pipe, self->endpoint );
+    }
+    else
     if (streq (command, "VERBOSE"))
         self->verbose = true;
     else

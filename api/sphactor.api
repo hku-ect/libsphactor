@@ -20,6 +20,12 @@
         <return type = "string" />
     </method>
 
+    <method name = "endpoint">
+        Return our sphactor's endpoint, after successful initialization. 
+        The endpoint is usually inproc://<uuid>
+        <return type = "string" />
+    </method>
+
     <method name = "set name">
         Set the public name of this sphactor node overriding the default. 
         <argument name = "name" type = "string" />

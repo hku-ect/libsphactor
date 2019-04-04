@@ -106,6 +106,18 @@ sphactor_name (sphactor_t *self)
     return self->name;
 }
 
+const char *
+sphactor_endpoint (sphactor_t *self)
+{
+    assert(self);
+    if ( self->endpoint == NULL )
+    {
+        zstr_send(self->actor, "ENDPOINT");
+        self->endpoint = zstr_recv( self->actor );
+    }
+    return self->endpoint;
+}
+
 void
 sphactor_set_name (sphactor_t *self, const char *name)
 {
@@ -144,7 +156,7 @@ sphactor_test (bool verbose)
     printf (" * sphactor: ");
 
     //  @selftest
-    //  Simple create/destroy test
+    //  Simple create/destroy/name/uuid test
     sphactor_t *self = sphactor_new ( NULL, NULL);
     assert (self);
     zuuid_t *uuidtest = sphactor_uuid(self);
@@ -159,7 +171,7 @@ sphactor_test (bool verbose)
 
     sphactor_destroy (&self);
 
-    //  Simple create/destroy test with specified uuid
+    //  Simple create/destroy/name/uuid test with specified uuid
     zuuid_t *uuid = zuuid_new();
     self = sphactor_new ( NULL, uuid);
     assert (self);
@@ -172,8 +184,26 @@ sphactor_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
-
     sphactor_destroy (&self);
+
+    //  Simple create/destroy/connect disconnect test with specified uuid
+    sphactor_t *pub = sphactor_new ( NULL, NULL);
+    sphactor_t *sub = sphactor_new ( NULL, NULL);
+    assert (pub);
+    assert (sub);
+    //  get endpoints
+    char *pendp = sphactor_endpoint(pub);
+    char *sendp = sphactor_endpoint(sub);
+    zuuid_t *puuid = sphactor_uuid(pub);
+    zuuid_t *suuid = sphactor_uuid(sub);
+    char *endpointest = (char *)malloc( (9 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );
+    sprintf( endpointest, "inproc://%s", zuuid_str(puuid));
+    assert( streq( pendp, endpointest));
+    sprintf( endpointest, "inproc://%s", zuuid_str(suuid));
+    assert( streq( sendp, endpointest));
+
+    sphactor_destroy (&pub);
+    sphactor_destroy (&sub);
 
     //  @end
     printf ("OK\n");
