@@ -22,7 +22,7 @@
 
     <method name = "endpoint">
         Return our sphactor's endpoint, after successful initialization. 
-        The endpoint is usually inproc://<uuid>
+        The endpoint is usually inproc://{uuid}
         <return type = "string" />
     </method>
 
@@ -34,15 +34,15 @@
     <method name = "connect">
         Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
         failure.
-	<argument name "endpoint" type="string" />
-        <return type = "int" />
+	<argument name = "endpoint" type="string" />
+        <return type = "integer" />
     </method>
 
     <method name = "disconnect">
         Disconnect the node's sub socket from a pub endpoint. Returns 0 if succesful -1 on
         failure.
-	<argument name "endpoint" type="string" />
-        <return type = "int" />
+	<argument name = "endpoint" type="string" />
+        <return type = "integer" />
     </method>
 
     <method name = "start">

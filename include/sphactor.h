@@ -41,9 +41,24 @@ SPHACTOR_EXPORT zuuid_t *
 SPHACTOR_EXPORT const char *
     sphactor_name (sphactor_t *self);
 
+//  Return our sphactor's endpoint, after successful initialization.
+//  The endpoint is usually inproc://{uuid}
+SPHACTOR_EXPORT const char *
+    sphactor_endpoint (sphactor_t *self);
+
 //  Set the public name of this sphactor node overriding the default.
 SPHACTOR_EXPORT void
     sphactor_set_name (sphactor_t *self, const char *name);
+
+//  Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
+//  failure.
+SPHACTOR_EXPORT int
+    sphactor_connect (sphactor_t *self, const char *endpoint);
+
+//  Disconnect the node's sub socket from a pub endpoint. Returns 0 if succesful -1 on
+//  failure.
+SPHACTOR_EXPORT int
+    sphactor_disconnect (sphactor_t *self, const char *endpoint);
 
 //  Start node, after setting header values.
 //  Returns 0 if OK, -1 if it wasn't possible to start the node.

@@ -63,23 +63,14 @@
 #   endif
 #endif
 
-//  Project has no stable classes, so we build the draft API
-#undef  SPHACTOR_BUILD_DRAFT_API
-#define SPHACTOR_BUILD_DRAFT_API
-
 //  Opaque class structures to allow forward references
 //  These classes are stable or legacy and built in all releases
-//  Draft classes are by default not built in stable releases
-#ifdef SPHACTOR_BUILD_DRAFT_API
 typedef struct _sphactor_t sphactor_t;
 #define SPHACTOR_T_DEFINED
-#endif // SPHACTOR_BUILD_DRAFT_API
 
 
 //  Public classes, each with its own header file
-#ifdef SPHACTOR_BUILD_DRAFT_API
 #include "sphactor.h"
-#endif // SPHACTOR_BUILD_DRAFT_API
 
 #ifdef SPHACTOR_BUILD_DRAFT_API
 
