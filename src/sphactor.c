@@ -118,6 +118,45 @@ sphactor_endpoint (sphactor_t *self)
     return self->endpoint;
 }
 
+int
+sphactor_connect (sphactor_t *self, const char *endpoint)
+{
+    assert(self);
+    assert(endpoint);
+    zstr_sendx( self->actor, "CONNECT", endpoint, NULL );
+    zmsg_t *response = zmsg_recv( self->actor );
+    char *cmd = zmsg_popstr( response );
+    assert( streq( cmd, "CONNECTED"));
+    char *dest = zmsg_popstr(response);
+    char *rc = zmsg_popstr(response);
+    assert ( streq(rc, "0") );
+    int rci = streq(rc, "0") ? 0 : -1;
+    zstr_free(&cmd);
+    zstr_free(&dest);
+    zstr_free(&rc);
+
+    return rci;}
+
+int
+sphactor_disconnect (sphactor_t *self, const char *endpoint)
+{
+    assert(self);
+    assert(endpoint);
+    zstr_sendx( self->actor, "DISCONNECT", endpoint, NULL );
+    zmsg_t *response = zmsg_recv( self->actor );
+    char *cmd = zmsg_popstr( response );
+    assert( streq( cmd, "DISCONNECTED"));
+    char *dest = zmsg_popstr(response);
+    char *rc = zmsg_popstr(response);
+    assert ( streq(rc, "0") );
+    int rci = streq(rc, "0") ? 0 : -1;
+    zstr_free(&cmd);
+    zstr_free(&dest);
+    zstr_free(&rc);
+
+    return rci;
+}
+
 void
 sphactor_set_name (sphactor_t *self, const char *name)
 {
@@ -186,7 +225,7 @@ sphactor_test (bool verbose)
     zstr_free(&name2);
     sphactor_destroy (&self);
 
-    //  Simple create/destroy/connect disconnect test with specified uuid
+    //  Simple create/destroy/connect/disconnect test
     sphactor_t *pub = sphactor_new ( NULL, NULL);
     sphactor_t *sub = sphactor_new ( NULL, NULL);
     assert (pub);
@@ -201,7 +240,14 @@ sphactor_test (bool verbose)
     assert( streq( pendp, endpointest));
     sprintf( endpointest, "inproc://%s", zuuid_str(suuid));
     assert( streq( sendp, endpointest));
+    //  connect sub to pub
+    int rc = sphactor_connect(sub, pendp);
+    assert( rc == 0);
+    //  disconnect sub to pub
+    rc = sphactor_disconnect(sub, pendp);
+    assert( rc == 0);
 
+    zstr_free( &endpointest );
     sphactor_destroy (&pub);
     sphactor_destroy (&sub);
 

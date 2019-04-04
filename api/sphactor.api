@@ -31,6 +31,20 @@
         <argument name = "name" type = "string" />
     </method>
 
+    <method name = "connect">
+        Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
+        failure.
+	<argument name "endpoint" type="string" />
+        <return type = "int" />
+    </method>
+
+    <method name = "disconnect">
+        Disconnect the node's sub socket from a pub endpoint. Returns 0 if succesful -1 on
+        failure.
+	<argument name "endpoint" type="string" />
+        <return type = "int" />
+    </method>
+
     <method name = "start">
         Start node, after setting header values. 
         Returns 0 if OK, -1 if it wasn't possible to start the node.

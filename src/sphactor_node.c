@@ -33,10 +33,13 @@ struct _sphactor_node_t {
     char        *endpoint;      //  Our endpoint string (based on uuid)
     zuuid_t     *uuid;          //  Our UUID identifier
     char        *name;          //  Our name (defaults to first 6 chars of our uuid)
-    zlist_t     *subs;          //  a list of our subscription sockets
+    zhash_t     *subs;          //  a list of our subscription sockets
     zloop_t     *loop;          // perhaps we'll use zloop instead of poller
 };
 
+//  forward decl
+zsock_t *
+sphactor_node_require_transport(sphactor_node_t *self, const char *dest);
 
 //  --------------------------------------------------------------------------
 //  Create a new sphactor_node instance
@@ -64,7 +67,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
     assert(self->pub);
 
     // create an empty list for our subscriptions
-    self->subs = zlist_new();
+    self->subs = zhash_new();
     assert(self->subs);
 
     self->pipe = pipe;
@@ -85,21 +88,21 @@ sphactor_node_destroy (sphactor_node_t **self_p)
     if (*self_p) {
         sphactor_node_t *self = *self_p;
 
-        //  TODO: Free actor properties
+        zpoller_destroy (&self->poller);
         zuuid_destroy(&self->uuid);
         zstr_free(&self->name);
         zstr_free(&self->endpoint);
         zsock_destroy(&self->pub);
         // iterate subs list and destroy
-        zsock_t *itr = zlist_first( self->subs );
+        zsock_t *itr = zhash_first( self->subs );
         while (itr)
         {
             zsock_destroy( &itr );
-            itr = zlist_next( self->subs );
+            itr = zhash_next( self->subs );
         }
+        zhash_destroy(&self->subs);
 
         //  Free object itself
-        zpoller_destroy (&self->poller);
         free (self);
         *self_p = NULL;
     }
@@ -137,12 +140,18 @@ sphactor_node_stop (sphactor_node_t *self)
 //  Returns 0 on success -1 on failure
 
 static int
-sphactor_node_connect (sphactor_node_t *self, char *dest)
+sphactor_node_connect (sphactor_node_t *self, const char *dest)
 {
-    assert (self);
-
-    //TODO
-    return 0;
+    assert ( self);
+    assert ( dest );
+    char topic[2] = "";
+    //  TODO: determnine transport
+    zsock_t *sub = sphactor_node_require_transport(self, dest);
+    assert( sub );
+    int rc = zsock_connect(sub, dest);
+    assert(rc == 0);
+    zsock_set_subscribe(sub, topic);
+    return rc;
 }
 
 
@@ -153,11 +162,13 @@ static int
 sphactor_node_disconnect (sphactor_node_t *self, char *dest)
 {
     assert (self);
-
-    //  TODO: Add shutdown actions
-
+    //  request sub socket to disconnect, this will create the socket if it doesn't exist
+    zsock_t *sub = sphactor_node_require_transport(self, dest);
+    assert( sub );
+    int rc = zsock_disconnect(sub, dest);
     return 0;
 }
+
 //  Here we handle incoming message from the node
 
 static void
@@ -178,7 +189,8 @@ sphactor_node_recv_api (sphactor_node_t *self)
     if (streq (command, "CONNECT"))
     {
         char *dest = zmsg_popstr (request);
-        int rc = sphactor_node_disconnect (self, dest);
+        int rc = sphactor_node_connect (self, dest);
+        assert( rc == 0 );
         zstr_sendm (self->pipe, "CONNECTED");
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
@@ -222,7 +234,34 @@ sphactor_node_recv_api (sphactor_node_t *self)
     zmsg_destroy (&request);
 }
 
+//  Based on the given endpoint return a relevant socket. If no socket available
+//  it will create a new one for the transport.
+//  Returns the socket or NULL if failed
+zsock_t *
+sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
+{
+    // determine transport medium (split on ://)
+    const char delim[3] = "://";
+    char *transport, *orig;
+    orig = strdup(dest);
+    transport = strtok( orig, delim);
+    assert( transport );
+    zsock_t *sub = (zsock_t *)zhash_lookup(self->subs, transport);
+    if ( sub == NULL )
+    {
+        // create new socket for transport
+        zsys_info("Creating new sub socket for %s transport", transport);
+        sub = zsock_new_sub(dest, NULL);
+        assert( sub );
+        int rc = zhash_insert(self->subs, transport, sub);
+        assert( rc == 0);
+    }
 
+    //zstr_free(&transport);
+    zstr_free(&orig);
+
+    return sub;
+}
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
 
