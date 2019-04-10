@@ -34,7 +34,7 @@ struct _sphactor_t {
 
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
-//  a uuid will be generated and the first ./src/libsph.pc.in6 chars will be used as a name
+//  a uuid will be generated and the first 6 chars will be used as a name
 
 sphactor_t *
 sphactor_new (const char *name, zuuid_t *uuid)
@@ -142,17 +142,18 @@ sphactor_disconnect (sphactor_t *self, const char *endpoint)
 {
     assert(self);
     assert(endpoint);
-    zstr_sendx( self->actor, "DISCONNECT", endpoint, NULL );
+    int rc = zstr_sendx( self->actor, "DISCONNECT", endpoint, NULL );
+    assert( rc == 0);
     zmsg_t *response = zmsg_recv( self->actor );
     char *cmd = zmsg_popstr( response );
     assert( streq( cmd, "DISCONNECTED"));
     char *dest = zmsg_popstr(response);
-    char *rc = zmsg_popstr(response);
-    assert ( streq(rc, "0") );
-    int rci = streq(rc, "0") ? 0 : -1;
+    char *rcc = zmsg_popstr(response);
+    assert ( streq(rcc, "0") );
+    int rci = streq(rcc, "0") ? 0 : -1;
     zstr_free(&cmd);
     zstr_free(&dest);
-    zstr_free(&rc);
+    zstr_free(&rcc);
 
     return rci;
 }
@@ -230,6 +231,7 @@ sphactor_test (bool verbose)
     sphactor_t *sub = sphactor_new ( NULL, NULL);
     assert (pub);
     assert (sub);
+    sphactor_set_verbose(sub, true);
     //  get endpoints
     const char *pendp = sphactor_endpoint(pub);
     const char *sendp = sphactor_endpoint(sub);

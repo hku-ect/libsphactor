@@ -30,11 +30,13 @@ struct _sphactor_node_t {
     bool verbose;               //  Verbose logging enabled?
     //  Declare properties
     zsock_t     *pub;           //  Our publisch socket
+    zsock_t     *sub;           //  Our subscribe socket
     char        *endpoint;      //  Our endpoint string (based on uuid)
     zuuid_t     *uuid;          //  Our UUID identifier
     char        *name;          //  Our name (defaults to first 6 chars of our uuid)
     zhash_t     *subs;          //  a list of our subscription sockets
-    zloop_t     *loop;          // perhaps we'll use zloop instead of poller
+    zloop_t     *loop;          //  perhaps we'll use zloop instead of poller
+    zmsg_t *(*handler)(sphactor_node_t *self, zmsg_t *msg, void *args);
 };
 
 //  forward decl
@@ -63,7 +65,12 @@ sphactor_node_new (zsock_t *pipe, void *args)
     // setup a pub socket
     self->endpoint = (char *)malloc( (9 + strlen(zuuid_str(self->uuid) ) )  * sizeof(char) );
     sprintf( self->endpoint, "inproc://%s", zuuid_str(self->uuid) );
-    self->pub = zsock_new_pub(self->endpoint);
+    self->pub = zsock_new( ZMQ_PUB );
+    assert(self->pub);
+    int rc = zsock_bind( self->pub, "%s", self->endpoint );
+    assert( rc == 0);
+
+    self->sub = zsock_new( ZMQ_SUB );
     assert(self->pub);
 
     // create an empty list for our subscriptions
@@ -73,6 +80,8 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->pipe = pipe;
     self->terminated = false;
     self->poller = zpoller_new (self->pipe, NULL);
+    rc = zpoller_add(self->poller, self->sub);
+    assert ( rc == 0 );
 
     return self;
 }
@@ -93,6 +102,7 @@ sphactor_node_destroy (sphactor_node_t **self_p)
         zstr_free(&self->name);
         zstr_free(&self->endpoint);
         zsock_destroy(&self->pub);
+        zsock_destroy(&self->sub);
         // iterate subs list and destroy
         zsock_t *itr = zhash_first( self->subs );
         while (itr)
@@ -144,12 +154,14 @@ sphactor_node_connect (sphactor_node_t *self, const char *dest)
 {
     assert ( self);
     assert ( dest );
+    assert( streq(dest, self->endpoint) == 0 );  //  endpoint should not be ours
     char topic[2] = "";
     zsock_t *sub = sphactor_node_require_transport(self, dest);
     assert( sub );
     int rc = zsock_connect(sub, "%s", dest);
     assert(rc == 0);
     zsock_set_subscribe(sub, topic);
+    assert ( rc == 0 );
     return rc;
 }
 
@@ -180,6 +192,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
        return;        //  Interrupted
 
     char *command = zmsg_popstr (request);
+    if (self->verbose ) zsys_info("command: %s", command);
     if (streq (command, "START"))
         sphactor_node_start (self);
     else
@@ -211,16 +224,17 @@ sphactor_node_recv_api (sphactor_node_t *self)
     }
     else
     if (streq (command, "NAME"))
-    {
         zstr_send ( self->pipe, self->name );
-    }
     else
     if (streq (command, "ENDPOINT"))
-    {
         zstr_send ( self->pipe, self->endpoint );
+    else
+    if (streq (command, "SEND"))
+    {
+        zstr_send ( self->pub, self->name );
     }
     else
-    if (streq (command, "VERBOSE"))
+    if (streq (command, "SET VERBOSE"))
         self->verbose = true;
     else
     if (streq (command, "$TERM"))
@@ -241,6 +255,7 @@ zsock_t *
 sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 {
     // determine transport medium (split on ://)
+    /* somehow this doesn't work
     const char delim[3] = "://";
     char *transport, *orig;
     orig = strdup(dest);
@@ -250,7 +265,7 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
     if ( sub == NULL )
     {
         // create new socket for transport
-        zsys_info("Creating new sub socket for %s transport", transport);
+        if (self->verbose) zsys_info("Creating new sub socket for %s transport", transport);
         sub = zsock_new_sub(dest, NULL);
         assert( sub );
         int rc = zhash_insert(self->subs, transport, sub);
@@ -259,8 +274,8 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 
     //zstr_free(&transport);
     zstr_free(&orig);
-
-    return sub;
+    */
+    return self->sub;
 }
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
@@ -276,10 +291,31 @@ sphactor_node_actor (zsock_t *pipe, void *args)
     zsock_signal (self->pipe, 0);
 
     while (!self->terminated) {
-        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, 0);
+        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, -1);
         if (which == self->pipe)
             sphactor_node_recv_api (self);
-       //  Add other sockets when you need them.
+        //  if a sub socket then process actor
+        else
+        if ( which == self->sub ) {
+            zmsg_t *msg = zmsg_recv(which);
+            if (!msg)
+            {
+                break; //  interupted
+            }
+            // TODO: think this through
+            self->handler(self, msg, NULL);
+        }
+        zsock_t *sub = zhash_first( self->subs );
+        while ( sub )
+        {
+            if ( which == sub )
+            {
+                //  run the actor's handle
+                //self->handler
+                break;
+            }
+        }
+
     }
     sphactor_node_destroy (&self);
 }
@@ -323,6 +359,18 @@ sphactor_node_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
 
+    // acquire the endpoint
+    zstr_send(sphactor_node, "ENDPOINT");
+    char *endpoint = zstr_recv(sphactor_node);
+
+    // send something through the pub socket
+    zsock_t *sub = zsock_new_sub(endpoint, "");
+    assert(sub);
+    zstr_send(sphactor_node, "SEND");
+    char *name3 = zstr_recv(sub);
+    assert( streq ( name, name3 ));
+
+    zsock_destroy(&sub);
     zuuid_destroy(&uuid);
     zstr_free(&name2);
     zactor_destroy (&sphactor_node);
