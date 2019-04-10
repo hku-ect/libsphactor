@@ -21,6 +21,12 @@
 
 #include "sphactor_classes.h"
 
+// structure of our shim
+typedef struct {
+    zmsg_t *(*handler)(sphactor_node_t *self, zmsg_t *msg, void *args);
+    void* args;
+} sphactor_shim_t;
+
 //  Structure of our actor
 
 struct _sphactor_node_t {
@@ -36,8 +42,9 @@ struct _sphactor_node_t {
     char        *name;          //  Our name (defaults to first 6 chars of our uuid)
     zhash_t     *subs;          //  a list of our subscription sockets
     zloop_t     *loop;          //  perhaps we'll use zloop instead of poller
-    zmsg_t *(*handler)(sphactor_node_t *self, zmsg_t *msg, void *args);
+    sphactor_shim_t *shim;
 };
+
 
 //  forward decl
 zsock_t *
@@ -52,7 +59,9 @@ sphactor_node_new (zsock_t *pipe, void *args)
     sphactor_node_t *self = (sphactor_node_t *) zmalloc (sizeof (sphactor_node_t));
     assert (self);
 
-    self->uuid = (zuuid_t *)args;
+    self->shim = (sphactor_shim_t *)args;
+    assert( self->shim );
+    self->uuid = NULL;
     if (self->uuid == NULL)
     {
         self->uuid = zuuid_new ();
@@ -277,12 +286,44 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
     */
     return self->sub;
 }
+
+//  a producer and consumer method for testing the sphactor.
+
+static zmsg_t *
+sph_actor_producer(sphactor_node_t *self, zmsg_t *msg, void *args)
+{
+    assert( self );
+    static int count = 0;
+    zstr_sendm(self->pub, "PING");
+    zstr_sendf(self->pub, "%d", count+=1 );
+    zsys_info("producer sent PING %d", count );
+    return NULL;
+}
+
+static zmsg_t *
+sph_actor_consumer(sphactor_node_t *self, zmsg_t *msg, void *args)
+{
+    assert( self );
+    assert( msg );
+    char *cmd = zmsg_popstr( msg );
+    assert( streq(cmd, "PING") );
+    char *count = zmsg_popstr( msg );
+    assert( strlen(count) == 1 );
+    zsys_info("consumer received %s %s", cmd, count );
+    return NULL;
+}
+
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
 
 void
 sphactor_node_actor (zsock_t *pipe, void *args)
 {
+    if ( !args )
+    {
+        sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
+        args = (void *)&consumer;
+    }
     sphactor_node_t * self = sphactor_node_new (pipe, args);
     if (!self)
         return;          //  Interrupted
@@ -300,10 +341,10 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             zmsg_t *msg = zmsg_recv(which);
             if (!msg)
             {
-                break; //  interupted
+                break; //  interrupted
             }
             // TODO: think this through
-            self->handler(self, msg, NULL);
+            self->shim->handler(self, msg, self->shim->args);
         }
         zsock_t *sub = zhash_first( self->subs );
         while ( sub )
@@ -336,13 +377,15 @@ sphactor_node_actor (zsock_t *pipe, void *args)
 #define SELFTEST_DIR_RO "src/selftest-ro"
 #define SELFTEST_DIR_RW "src/selftest-rw"
 
+
 void
 sphactor_node_test (bool verbose)
 {
     printf (" * sphactor_node: ");
     //  @selftest
     //  Simple create/destroy test
-    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, NULL);
+    sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
+    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, &consumer);
     assert (sphactor_node);
     // acquire the uuid
     zstr_send(sphactor_node, "UUID");
@@ -370,7 +413,18 @@ sphactor_node_test (bool verbose)
     char *name3 = zstr_recv(sub);
     assert( streq ( name, name3 ));
 
+    //  send a ping to the consumer
+    zsock_t *pub = zsock_new_pub("inproc://bla");
+    assert( pub);
+    zstr_sendm(sphactor_node, "CONNECT");
+    zstr_send(sphactor_node, "inproc://bla");
+    zclock_sleep(10);
+    zstr_sendm(pub, "PING");
+    zstr_send(pub, "1");
+    zclock_sleep(10);   //  prevent destroy before ping being handled
+
     zsock_destroy(&sub);
+    zsock_destroy(&pub);
     zuuid_destroy(&uuid);
     zstr_free(&name2);
     zactor_destroy (&sphactor_node);

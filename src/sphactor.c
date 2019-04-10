@@ -211,20 +211,20 @@ sphactor_test (bool verbose)
 
     sphactor_destroy (&self);
 
-    //  Simple create/destroy/name/uuid test with specified uuid
-    zuuid_t *uuid = zuuid_new();
-    self = sphactor_new ( NULL, uuid);
-    assert (self);
-    uuidtest = sphactor_uuid(self);
-    assert(uuidtest);
-    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
-    //  name should be the first 6 chars from the uuid
-    name = sphactor_name( self );
-    name2 = (char *) zmalloc (7);
-    memcpy (name2, zuuid_str(uuid), 6);
-    assert( streq ( name, name2 ));
-    zstr_free(&name2);
-    sphactor_destroy (&self);
+//    //  Simple create/destroy/name/uuid test with specified uuid
+//    zuuid_t *uuid = zuuid_new();
+//    self = sphactor_new ( NULL, uuid);
+//    assert (self);
+//    uuidtest = sphactor_uuid(self);
+//    assert(uuidtest);
+//    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
+//    //  name should be the first 6 chars from the uuid
+//    name = sphactor_name( self );
+//    name2 = (char *) zmalloc (7);
+//    memcpy (name2, zuuid_str(uuid), 6);
+//    assert( streq ( name, name2 ));
+//    zstr_free(&name2);
+//    sphactor_destroy (&self);
 
     //  Simple create/destroy/connect/disconnect test
     sphactor_t *pub = sphactor_new ( NULL, NULL);
@@ -233,20 +233,20 @@ sphactor_test (bool verbose)
     assert (sub);
     sphactor_set_verbose(sub, true);
     //  get endpoints
-    const char *pendp = sphactor_endpoint(pub);
-    const char *sendp = sphactor_endpoint(sub);
+    const char *pubendp = sphactor_endpoint(pub);
+    const char *subendp = sphactor_endpoint(sub);
     zuuid_t *puuid = sphactor_uuid(pub);
     zuuid_t *suuid = sphactor_uuid(sub);
     char *endpointest = (char *)malloc( (9 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );
     sprintf( endpointest, "inproc://%s", zuuid_str(puuid));
-    assert( streq( pendp, endpointest));
+    assert( streq( pubendp, endpointest));
     sprintf( endpointest, "inproc://%s", zuuid_str(suuid));
-    assert( streq( sendp, endpointest));
+    assert( streq( subendp, endpointest));
     //  connect sub to pub
-    int rc = sphactor_connect(sub, pendp);
+    int rc = sphactor_connect(sub, pubendp);
     assert( rc == 0);
     //  disconnect sub to pub
-    rc = sphactor_disconnect(sub, pendp);
+    rc = sphactor_disconnect(sub, pubendp);
     assert( rc == 0);
 
     zstr_free( &endpointest );
