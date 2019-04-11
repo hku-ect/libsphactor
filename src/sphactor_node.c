@@ -80,7 +80,9 @@ sphactor_node_new (zsock_t *pipe, void *args)
     assert( rc == 0);
 
     self->sub = zsock_new( ZMQ_SUB );
-    assert(self->pub);
+    assert(self->sub);
+    // don't filter messages
+    zsock_set_subscribe( self->sub, "");
 
     // create an empty list for our subscriptions
     self->subs = zhash_new();
@@ -164,13 +166,8 @@ sphactor_node_connect (sphactor_node_t *self, const char *dest)
     assert ( self);
     assert ( dest );
     assert( streq(dest, self->endpoint) == 0 );  //  endpoint should not be ours
-    char topic[2] = "";
-    zsock_t *sub = sphactor_node_require_transport(self, dest);
-    assert( sub );
-    int rc = zsock_connect(sub, "%s", dest);
+    int rc = zsock_connect(self->sub, "%s", dest);
     assert(rc == 0);
-    zsock_set_subscribe(sub, topic);
-    assert ( rc == 0 );
     return rc;
 }
 
