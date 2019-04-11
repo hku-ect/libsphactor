@@ -21,12 +21,6 @@
 
 #include "sphactor_classes.h"
 
-// structure of our shim
-typedef struct {
-    zmsg_t *(*handler)(sphactor_node_t *self, zmsg_t *msg, void *args);
-    void* args;
-} sphactor_shim_t;
-
 //  Structure of our actor
 
 struct _sphactor_node_t {
@@ -318,10 +312,11 @@ sphactor_node_actor (zsock_t *pipe, void *args)
 {
     if ( !args )
     {
-        sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
+        // as a test for now
+        sphactor_shim_t *consumer = sphactor_shim_new();
         args = (void *)&consumer;
     }
-    sphactor_node_t * self = sphactor_node_new (pipe, args);
+    sphactor_node_t *self = sphactor_node_new (pipe, args);
     if (!self)
         return;          //  Interrupted
 
@@ -341,7 +336,11 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 break; //  interrupted
             }
             // TODO: think this through
-            self->shim->handler(self, msg, self->shim->args);
+            zmsg_t *retmsg = sphactor_shim_handle(self->shim, msg);
+            if (retmsg)
+            {
+                // publish the msg
+            }
         }
         zsock_t *sub = zhash_first( self->subs );
         while ( sub )
@@ -381,8 +380,9 @@ sphactor_node_test (bool verbose)
     printf (" * sphactor_node: ");
     //  @selftest
     //  Simple create/destroy test
-    sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
-    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, &consumer);
+    sphactor_shim_t *consumer = sphactor_shim_new();
+    sphactor_shim_handler(consumer, &sph_actor_consumer, NULL);
+    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, consumer);
     assert (sphactor_node);
     // acquire the uuid
     zstr_send(sphactor_node, "UUID");
