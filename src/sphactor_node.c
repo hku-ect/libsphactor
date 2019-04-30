@@ -22,6 +22,13 @@
 #include "sphactor_classes.h"
 
 //  Structure of our actor
+typedef zmsg_t * (sphactor_handler_fn) (
+    zmsg_t *msg, void *arg);
+
+typedef struct {
+    sphactor_handler_fn *handler;  // our handler
+    void* args;     // arguments for the handler
+} sphactor_shim_t;
 
 struct _sphactor_node_t {
     zsock_t *pipe;              //  Actor command pipe
@@ -55,11 +62,13 @@ sphactor_node_new (zsock_t *pipe, void *args)
 
     self->shim = (sphactor_shim_t *)args;
     assert( self->shim );
+    // TODO can we pass the uuid?
     self->uuid = NULL;
     if (self->uuid == NULL)
     {
         self->uuid = zuuid_new ();
     }
+    //  TODO can we pass the name?
     //  Default name for node is first 6 characters of UUID:
     //  the shorter string is more readable in logs
     self->name = (char *) zmalloc (7);
@@ -236,7 +245,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
     {
-        zmsg_t *retmsg = sphactor_shim_handle(self->shim, NULL);
+        zmsg_t *retmsg = self->shim->handler(NULL, self->shim->args);
         if (retmsg)
         {
             //publish it
@@ -292,9 +301,8 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 //  a producer and consumer method for testing the sphactor.
 
 static zmsg_t *
-sph_actor_producer(sphactor_shim_t *self, zmsg_t *msg, void *args)
+sph_actor_producer(zmsg_t *msg, void *args)
 {
-    assert( self );
     static int count = 0;
     if ( !msg )
     {
@@ -307,9 +315,8 @@ sph_actor_producer(sphactor_shim_t *self, zmsg_t *msg, void *args)
 }
 
 static zmsg_t *
-sph_actor_consumer(sphactor_shim_t *self, zmsg_t *msg, void *args)
+sph_actor_consumer(zmsg_t *msg, void *args)
 {
-    assert( self );
     assert( msg );
     char *cmd = zmsg_popstr( msg );
     assert( streq(cmd, "PING") );
@@ -328,7 +335,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
     if ( !args )
     {
         // as a test for now
-        sphactor_shim_t *consumer = sphactor_shim_new();
+        sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
         args = (void *)&consumer;
     }
     sphactor_node_t *self = sphactor_node_new (pipe, args);
@@ -351,7 +358,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 break; //  interrupted
             }
             // TODO: think this through
-            zmsg_t *retmsg = sphactor_shim_handle(self->shim, msg);
+            zmsg_t *retmsg = self->shim->handler(msg, self->shim->args);
             if (retmsg)
             {
                 // publish the msg
@@ -395,9 +402,8 @@ sphactor_node_test (bool verbose)
     printf (" * sphactor_node: ");
     //  @selftest
     //  Simple create/destroy test
-    sphactor_shim_t *consumer = sphactor_shim_new();
-    sphactor_shim_handler(consumer, &sph_actor_consumer, NULL);
-    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, consumer);
+    sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
+    zactor_t *sphactor_node = zactor_new (sphactor_node_actor, &consumer);
     assert (sphactor_node);
     // acquire the uuid
     zstr_send(sphactor_node, "UUID");
@@ -436,9 +442,8 @@ sphactor_node_test (bool verbose)
     zclock_sleep(10);   //  prevent destroy before ping being handled
 
     // create a producer actor
-    sphactor_shim_t *producer = sphactor_shim_new();
-    sphactor_shim_handler(producer, &sph_actor_producer, NULL);
-    zactor_t *sphactor_producer = zactor_new (sphactor_node_actor, producer);
+    sphactor_shim_t producer = { &sph_actor_producer, NULL };
+    zactor_t *sphactor_producer = zactor_new (sphactor_node_actor, &producer);
     assert (sphactor_producer);
     // get endpoint of producer
     zstr_send(sphactor_producer, "ENDPOINT");
@@ -448,7 +453,7 @@ sphactor_node_test (bool verbose)
     zstr_send(sphactor_node, prod_endpoint);
     zsys_info("%s %s %s", zstr_recv(sphactor_node), zstr_recv(sphactor_node), zstr_recv(sphactor_node));
     zstr_send(sphactor_producer, "TRIGGER");
-    zclock_sleep(100);   //  prevent destroy before ping being handled
+    zclock_sleep(10);   //  prevent destroy before ping being handled
 
 
     zsock_destroy(&sub);

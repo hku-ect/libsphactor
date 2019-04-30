@@ -13,7 +13,6 @@
     <use project = "czmq" />
 
     <class name = "sphactor" />
-    <class name = "sphactor_shim" />
     <actor name = "sphactor_node" private = "1" />
     <main name = "hello" private = "1" />
     
