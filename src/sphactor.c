@@ -14,7 +14,12 @@
 
 /*
 @header
-    sphactor -
+    libsphactor implements an actor model using czmq zactor
+    and pub/sub sockets for the actors to communicate with
+    each other.
+
+    A zactor needs a shim which contains the process to run and its parameters
+
 @discuss
 @end
 */

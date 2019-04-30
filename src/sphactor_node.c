@@ -234,6 +234,17 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_send ( self->pub, self->name );
     }
     else
+    if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
+    {
+        zmsg_t *retmsg = sphactor_shim_handle(self->shim, NULL);
+        if (retmsg)
+        {
+            //publish it
+            zmsg_send(&retmsg, self->pub);
+        }
+        zmsg_destroy( &retmsg );
+    }
+    else
     if (streq (command, "SET VERBOSE"))
         self->verbose = true;
     else
@@ -281,18 +292,22 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 //  a producer and consumer method for testing the sphactor.
 
 static zmsg_t *
-sph_actor_producer(sphactor_node_t *self, zmsg_t *msg, void *args)
+sph_actor_producer(sphactor_shim_t *self, zmsg_t *msg, void *args)
 {
     assert( self );
     static int count = 0;
-    zstr_sendm(self->pub, "PING");
-    zstr_sendf(self->pub, "%d", count+=1 );
-    zsys_info("producer sent PING %d", count );
-    return NULL;
+    if ( !msg )
+    {
+        msg = zmsg_new();
+        zmsg_addstr(msg, "PING");
+        zmsg_addstrf(msg, "%d", count+=1);
+        zsys_info("producer sent PING %d", count );
+    }
+    return msg;
 }
 
 static zmsg_t *
-sph_actor_consumer(sphactor_node_t *self, zmsg_t *msg, void *args)
+sph_actor_consumer(sphactor_shim_t *self, zmsg_t *msg, void *args)
 {
     assert( self );
     assert( msg );
@@ -403,7 +418,7 @@ sphactor_node_test (bool verbose)
     zstr_send(sphactor_node, "ENDPOINT");
     char *endpoint = zstr_recv(sphactor_node);
 
-    // send something through the pub socket
+    // send something through the pub socket  and receive it
     zsock_t *sub = zsock_new_sub(endpoint, "");
     assert(sub);
     zstr_send(sphactor_node, "SEND");
@@ -420,11 +435,28 @@ sphactor_node_test (bool verbose)
     zstr_send(pub, "1");
     zclock_sleep(10);   //  prevent destroy before ping being handled
 
+    // create a producer actor
+    sphactor_shim_t *producer = sphactor_shim_new();
+    sphactor_shim_handler(producer, &sph_actor_producer, NULL);
+    zactor_t *sphactor_producer = zactor_new (sphactor_node_actor, producer);
+    assert (sphactor_producer);
+    // get endpoint of producer
+    zstr_send(sphactor_producer, "ENDPOINT");
+    char *prod_endpoint = zstr_recv(sphactor_producer);
+    // connect producer to consumer
+    zstr_sendm(sphactor_node, "CONNECT");
+    zstr_send(sphactor_node, prod_endpoint);
+    zsys_info("%s %s %s", zstr_recv(sphactor_node), zstr_recv(sphactor_node), zstr_recv(sphactor_node));
+    zstr_send(sphactor_producer, "TRIGGER");
+    zclock_sleep(100);   //  prevent destroy before ping being handled
+
+
     zsock_destroy(&sub);
     zsock_destroy(&pub);
     zuuid_destroy(&uuid);
     zstr_free(&name2);
     zactor_destroy (&sphactor_node);
+    zactor_destroy (&sphactor_producer);
     //  @end
 
     printf ("OK\n");

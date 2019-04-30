@@ -27,6 +27,12 @@
         <return type = "integer" />
     </method>
 
+    <method name = "handle">
+        Execute the handler. Returns a zmsg or NULL.
+        <argument name = "msg" type = "zmsg" />
+        <return type = "zmsg" />
+    </method>
+
     <method name = "set name">
         Set the name for humans to see. You can only set this before the node runs! Returns 0 on success -1 on failure.
         <argument name = "name" type = "string" />
