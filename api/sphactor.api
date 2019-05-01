@@ -1,6 +1,16 @@
 <class name = "sphactor" state = "stable">
+
+    <callback_type name = "handler_fn">
+        Callback function for socket activity
+        <argument name = "msg" type = "zmsg" />
+        <argument name = "arg" type = "anything" />
+        <return type = "zmsg" />
+    </callback_type>
+
     <constructor>
         Constructor, creates a new Sphactor node. 
+        <argument name = "handler" type = "sphactor_handler_fn" callback = "1" />
+        <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
         <argument name = "uuid" type = "zuuid" optional = "1" />
     </constructor>

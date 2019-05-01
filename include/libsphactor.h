@@ -20,4 +20,10 @@
 
 //  Add your own public definitions here, if you need them
 
+// structure to pass to the zactor
+typedef struct {
+    sphactor_handler_fn *handler;  // our handler
+    void* args;     // arguments for the handler
+} sphactor_shim_t;
+
 #endif

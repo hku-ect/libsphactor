@@ -24,9 +24,13 @@ extern "C" {
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
+// Callback function for socket activity
+typedef zmsg_t * (sphactor_handler_fn) (
+    zmsg_t *msg, void *arg);
+
 //  Constructor, creates a new Sphactor node.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new (const char *name, zuuid_t *uuid);
+    sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor node.
 SPHACTOR_EXPORT void

@@ -36,13 +36,16 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
 };
 
+// forward decl
+static zmsg_t *
+hello_sphactor(zmsg_t *msg, void *args);
 
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
 
 sphactor_t *
-sphactor_new (const char *name, zuuid_t *uuid)
+sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t *uuid)
 {
     sphactor_t *self = (sphactor_t *) zmalloc (sizeof (sphactor_t));
     assert (self);
@@ -50,7 +53,8 @@ sphactor_new (const char *name, zuuid_t *uuid)
     if (uuid)
         self->uuid = zuuid_dup(uuid);
 
-    self->actor = zactor_new( sphactor_node_actor, uuid);
+    sphactor_shim_t shim = { handler, NULL };
+    self->actor = zactor_new( sphactor_node_actor, &shim);
 
     if (name)
     {
@@ -195,6 +199,34 @@ sphactor_set_verbose (sphactor_t *self, bool on)
 #define SELFTEST_DIR_RO "src/selftest-ro"
 #define SELFTEST_DIR_RW "src/selftest-rw"
 
+static zmsg_t *
+hello_sphactor(zmsg_t *msg, void *args)
+{
+    assert(msg);
+    // just echo what we receive
+    zsys_info("Hello actor says: %s", zmsg_popstr(msg));
+    // if there are strings left publish them
+    if ( zmsg_size(msg) > 0 )
+    {
+        return msg;
+    }
+    return NULL;
+}
+
+static zmsg_t *
+hello_sphactor2(zmsg_t *msg, void *args)
+{
+    assert(msg);
+    // just echo what we receive
+    zsys_info("Hello2 actor says: %s", zmsg_popstr(msg));
+    // if there are strings left publish them
+    if ( zmsg_size(msg) > 0 )
+    {
+        return msg;
+    }
+    return NULL;
+}
+
 void
 sphactor_test (bool verbose)
 {
@@ -202,7 +234,7 @@ sphactor_test (bool verbose)
 
     //  @selftest
     //  Simple create/destroy/name/uuid test
-    sphactor_t *self = sphactor_new ( NULL, NULL);
+    sphactor_t *self = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (self);
     zuuid_t *uuidtest = sphactor_uuid(self);
     assert(uuidtest);
@@ -215,7 +247,6 @@ sphactor_test (bool verbose)
     zstr_free(&name2);
 
     sphactor_destroy (&self);
-
 //    //  Simple create/destroy/name/uuid test with specified uuid
 //    zuuid_t *uuid = zuuid_new();
 //    self = sphactor_new ( NULL, uuid);
@@ -232,8 +263,8 @@ sphactor_test (bool verbose)
 //    sphactor_destroy (&self);
 
     //  Simple create/destroy/connect/disconnect test
-    sphactor_t *pub = sphactor_new ( NULL, NULL);
-    sphactor_t *sub = sphactor_new ( NULL, NULL);
+    sphactor_t *pub = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    sphactor_t *sub = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (pub);
     assert (sub);
     sphactor_set_verbose(sub, true);
@@ -258,6 +289,21 @@ sphactor_test (bool verbose)
     sphactor_destroy (&pub);
     sphactor_destroy (&sub);
 
+
+    // sphactor_hello test
+    sphactor_t *hello1 = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    sphactor_t *hello2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
+    sphactor_connect(hello1, sphactor_endpoint(hello2));
+    sphactor_connect(hello2, sphactor_endpoint(hello1));
+    zstr_sendm(hello1->actor, "SEND");
+    zstr_sendm(hello1->actor, "HELLO");
+    zstr_sendm(hello1->actor, "WORLD");
+    zstr_sendm(hello1->actor, "AND");
+    zstr_sendm(hello1->actor, "ALIEN");
+    zstr_send(hello1->actor, "SPACELINGS");
+
+    sphactor_destroy (&hello1);
+    sphactor_destroy (&hello2);
     //  @end
     printf ("OK\n");
 }

@@ -22,28 +22,23 @@
 #include "sphactor_classes.h"
 
 //  Structure of our actor
-typedef zmsg_t * (sphactor_handler_fn) (
-    zmsg_t *msg, void *arg);
-
-typedef struct {
-    sphactor_handler_fn *handler;  // our handler
-    void* args;     // arguments for the handler
-} sphactor_shim_t;
 
 struct _sphactor_node_t {
-    zsock_t *pipe;              //  Actor command pipe
-    zpoller_t *poller;          //  Socket poller
-    bool terminated;            //  Did caller ask us to quit?
-    bool verbose;               //  Verbose logging enabled?
+    zsock_t *pipe;                //  Actor command pipe
+    zpoller_t *poller;            //  Socket poller
+    bool terminated;              //  Did caller ask us to quit?
+    bool verbose;                 //  Verbose logging enabled?
     //  Declare properties
-    zsock_t     *pub;           //  Our publisch socket
-    zsock_t     *sub;           //  Our subscribe socket
-    char        *endpoint;      //  Our endpoint string (based on uuid)
-    zuuid_t     *uuid;          //  Our UUID identifier
-    char        *name;          //  Our name (defaults to first 6 chars of our uuid)
-    zhash_t     *subs;          //  a list of our subscription sockets
-    zloop_t     *loop;          //  perhaps we'll use zloop instead of poller
-    sphactor_shim_t *shim;
+    zsock_t     *pub;             //  Our publisch socket
+    zsock_t     *sub;             //  Our subscribe socket
+    char        *endpoint;        //  Our endpoint string (based on uuid)
+    zuuid_t     *uuid;            //  Our UUID identifier
+    char        *name;            //  Our name (defaults to first 6 chars of our uuid)
+    zhash_t     *subs;            //  a list of our subscription sockets
+    zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
+    sphactor_handler_fn *handler; //  the handler to call on events
+    void        *handler_args     //  the arguments to the handler
+//    sphactor_shim_t *shim;
 };
 
 
@@ -60,11 +55,14 @@ sphactor_node_new (zsock_t *pipe, void *args)
     sphactor_node_t *self = (sphactor_node_t *) zmalloc (sizeof (sphactor_node_t));
     assert (self);
 
-    self->shim = (sphactor_shim_t *)args;
-    assert( self->shim );
+    sphactor_shim_t *shim = (sphactor_shim_t *)args;
+    assert( shim );
+    self->handler = shim->handler;
+    self->handler_args = shim->args;
+
     // TODO can we pass the uuid?
     self->uuid = NULL;
-    if (self->uuid == NULL)
+    if ( self->uuid == NULL)
     {
         self->uuid = zuuid_new ();
     }
@@ -240,12 +238,17 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "SEND"))
     {
-        zstr_send ( self->pub, self->name );
+        if (zmsg_size(request) > 0 )
+        {
+            zmsg_send(&request, self->pub);
+        }
+        else
+            zstr_send ( self->pub, self->name );
     }
     else
     if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
     {
-        zmsg_t *retmsg = self->shim->handler(NULL, self->shim->args);
+        zmsg_t *retmsg = self->handler(NULL, self->handler_args);
         if (retmsg)
         {
             //publish it
@@ -358,10 +361,11 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 break; //  interrupted
             }
             // TODO: think this through
-            zmsg_t *retmsg = self->shim->handler(msg, self->shim->args);
+            zmsg_t *retmsg = self->handler(msg, self->handler_args);
             if (retmsg)
             {
                 // publish the msg
+                zmsg_send(&retmsg, self->pub);
             }
         }
         zsock_t *sub = zhash_first( self->subs );
