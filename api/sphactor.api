@@ -55,17 +55,6 @@
         <return type = "integer" />
     </method>
 
-    <method name = "start">
-        Start node, after setting header values. 
-        Returns 0 if OK, -1 if it wasn't possible to start the node.
-        <return type = "integer" />
-    </method>
-
-    <method name = "stop">
-        Stop the node. This will not destroy the node but if you can start
-        it again is undetermined.
-    </method>
-
     <method name = "socket">
         Return socket for talking to the sphactor node and for polling.
         <return type = "zsock" />

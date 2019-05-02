@@ -127,6 +127,15 @@ sphactor_endpoint (sphactor_t *self)
     return self->endpoint;
 }
 
+
+void
+sphactor_set_name (sphactor_t *self, const char *name)
+{
+    assert (self);
+    assert (name);
+    zstr_sendx (self->actor, "SET NAME", name, NULL);
+}
+
 int
 sphactor_connect (sphactor_t *self, const char *endpoint)
 {
@@ -167,12 +176,10 @@ sphactor_disconnect (sphactor_t *self, const char *endpoint)
     return rci;
 }
 
-void
-sphactor_set_name (sphactor_t *self, const char *name)
+zsock_t *
+sphactor_socket(sphactor_t *self)
 {
-    assert (self);
-    assert (name);
-    zstr_sendx (self->actor, "SET NAME", name, NULL);
+    return zactor_resolve(self->actor);
 }
 
 void
@@ -301,7 +308,7 @@ sphactor_test (bool verbose)
     zstr_sendm(hello1->actor, "AND");
     zstr_sendm(hello1->actor, "ALIEN");
     zstr_send(hello1->actor, "SPACELINGS");
-
+    zclock_sleep(10); //  give some time for the test to complete, since it's threaded
     sphactor_destroy (&hello1);
     sphactor_destroy (&hello2);
     //  @end

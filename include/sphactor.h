@@ -64,16 +64,6 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_disconnect (sphactor_t *self, const char *endpoint);
 
-//  Start node, after setting header values.
-//  Returns 0 if OK, -1 if it wasn't possible to start the node.
-SPHACTOR_EXPORT int
-    sphactor_start (sphactor_t *self);
-
-//  Stop the node. This will not destroy the node but if you can start
-//  it again is undetermined.
-SPHACTOR_EXPORT void
-    sphactor_stop (sphactor_t *self);
-
 //  Return socket for talking to the sphactor node and for polling.
 SPHACTOR_EXPORT zsock_t *
     sphactor_socket (sphactor_t *self);
