@@ -2,7 +2,7 @@
 
     <callback_type name = "handler_fn">
         Callback function for socket activity
-        <argument name = "msg" type = "zmsg" />
+        <argument name = "event" type = "sphactor_event" />
         <argument name = "arg" type = "anything" />
         <return type = "zmsg" />
     </callback_type>

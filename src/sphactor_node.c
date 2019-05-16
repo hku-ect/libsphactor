@@ -37,7 +37,7 @@ struct _sphactor_node_t {
     zhash_t     *subs;            //  a list of our subscription sockets
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
     sphactor_handler_fn *handler; //  the handler to call on events
-    void        *handler_args     //  the arguments to the handler
+    void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
 };
 
@@ -304,26 +304,28 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 //  a producer and consumer method for testing the sphactor.
 
 static zmsg_t *
-sph_actor_producer(zmsg_t *msg, void *args)
+sph_actor_producer(sphactor_event_t *ev, void *args)
 {
     static int count = 0;
-    if ( !msg )
+    if ( ev == NULL )
     {
-        msg = zmsg_new();
+        zmsg_t *msg = zmsg_new();
         zmsg_addstr(msg, "PING");
         zmsg_addstrf(msg, "%d", count+=1);
         zsys_info("producer sent PING %d", count );
+        return msg;
     }
-    return msg;
+    assert( ev->msg );
+    return ev->msg;
 }
 
 static zmsg_t *
-sph_actor_consumer(zmsg_t *msg, void *args)
+sph_actor_consumer(sphactor_event_t *ev, void *args)
 {
-    assert( msg );
-    char *cmd = zmsg_popstr( msg );
+    assert( ev->msg );
+    char *cmd = zmsg_popstr( ev->msg );
     assert( streq(cmd, "PING") );
-    char *count = zmsg_popstr( msg );
+    char *count = zmsg_popstr( ev->msg );
     assert( strlen(count) == 1 );
     zsys_info("consumer received %s %s", cmd, count );
     return NULL;
@@ -361,7 +363,8 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 break; //  interrupted
             }
             // TODO: think this through
-            zmsg_t *retmsg = self->handler(msg, self->handler_args);
+            sphactor_event_t ev = { msg, "SOC", self->name, zuuid_str(self->uuid) };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
             if (retmsg)
             {
                 // publish the msg

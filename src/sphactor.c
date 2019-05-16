@@ -38,7 +38,7 @@ struct _sphactor_t {
 
 // forward decl
 static zmsg_t *
-hello_sphactor(zmsg_t *msg, void *args);
+hello_sphactor(sphactor_event_t *ev, void *args);
 
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
@@ -207,31 +207,42 @@ sphactor_set_verbose (sphactor_t *self, bool on)
 #define SELFTEST_DIR_RW "src/selftest-rw"
 
 static zmsg_t *
-hello_sphactor(zmsg_t *msg, void *args)
+hello_sphactor(sphactor_event_t *ev, void *args)
 {
-    assert(msg);
-    // just echo what we receive
-    zsys_info("Hello actor says: %s", zmsg_popstr(msg));
+    assert(ev->msg);
+    //  just echo what we receive
+    zsys_info("Hello actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
     // if there are strings left publish them
-    if ( zmsg_size(msg) > 0 )
+    if ( zmsg_size(ev->msg) > 0 )
     {
-        return msg;
+        return ev->msg;
     }
     return NULL;
 }
 
 static zmsg_t *
-hello_sphactor2(zmsg_t *msg, void *args)
+hello_sphactor2(sphactor_event_t *ev, void *args)
 {
-    assert(msg);
+    assert(ev->msg);
     // just echo what we receive
-    zsys_info("Hello2 actor says: %s", zmsg_popstr(msg));
+    zsys_info("Hello2 actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
     // if there are strings left publish them
-    if ( zmsg_size(msg) > 0 )
+    if ( zmsg_size(ev->msg) > 0 )
     {
-        return msg;
+        return ev->msg;
     }
     return NULL;
+}
+
+static zmsg_t *
+spawn_sphactor(sphactor_event_t *ev, void *args)
+{
+    assert(ev->msg);
+    //  just echo what we receive
+    zsys_info("Hello actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
+    // if there are strings left publish them
+    zmsg_addstrf( ev->msg, "HELLO from %s", ev->name);
+    return ev->msg;
 }
 
 void
@@ -311,6 +322,33 @@ sphactor_test (bool verbose)
     zclock_sleep(10); //  give some time for the test to complete, since it's threaded
     sphactor_destroy (&hello1);
     sphactor_destroy (&hello2);
+
+    // mega spawn test
+    long start = zclock_usecs();
+    sphactor_t *prev = NULL;
+    zlist_t *spawned_actors = zlist_new();
+    for (int i=0; i<100; i++)
+    {
+        sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
+        zsys_info("Sphactor %s spawned", sphactor_name(spawn));
+        if (prev)
+            sphactor_connect(prev, sphactor_endpoint(spawn));
+        zlist_append(spawned_actors, spawn);
+        prev = spawn;
+    }
+    zstr_sendm(prev->actor, "SEND");
+    zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
+    long end = zclock_usecs();
+    zsys_info("Actors spawned and kickstarted in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
+    zclock_sleep(200);
+    sphactor_t *itr = (sphactor_t *)zlist_first(spawned_actors);
+    while (zlist_size(spawned_actors) > 0)
+    {
+        sphactor_t *act = zlist_pop(spawned_actors);
+        sphactor_destroy( &act );
+    }
+    assert(zlist_size(spawned_actors) == 0);
+    zsys_info("destroyed spawned actors");
     //  @end
     printf ("OK\n");
 }
