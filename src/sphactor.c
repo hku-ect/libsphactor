@@ -58,6 +58,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     if (name)
     {
+        self->name = strdup(name);
         sphactor_set_name( self, name );
     }
 
