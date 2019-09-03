@@ -259,6 +259,12 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zmsg_destroy( &retmsg );
     }
     else
+    if (streq (command, "SET NAME"))
+    {
+        self->name = zmsg_popstr(request);
+        assert(self->name);
+    }
+    else
     if (streq (command, "SET VERBOSE"))
         self->verbose = true;
     else
@@ -429,16 +435,24 @@ sphactor_node_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
 
+    // set the name and acquire it
+    zstr_sendm(sphactor_node, "SET NAME");
+    zstr_send(sphactor_node, "testname");
+    zstr_send(sphactor_node, "NAME");
+    char *testname = zstr_recv(sphactor_node);
+    assert( streq ( testname, "testname" ));
+
     // acquire the endpoint
     zstr_send(sphactor_node, "ENDPOINT");
     char *endpoint = zstr_recv(sphactor_node);
 
     // send something through the pub socket  and receive it
+    // the SEND command returns the name of the node
     zsock_t *sub = zsock_new_sub(endpoint, "");
     assert(sub);
     zstr_send(sphactor_node, "SEND");
     char *name3 = zstr_recv(sub);
-    assert( streq ( name, name3 ));
+    assert( streq ( testname, name3 ));
 
     //  send a ping to the consumer
     zsock_t *pub = zsock_new_pub("inproc://bla");
