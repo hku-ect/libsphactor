@@ -341,6 +341,9 @@ sphactor_test (bool verbose)
     long start = zclock_usecs();
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
+    // we'll start 250 actors which will be formed into a single chain.
+    // each actor will send hello to the connected actor, wich is started
+    // from the last created actor
     for (int i=0; i<250; i++)
     {
         sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
@@ -356,12 +359,11 @@ sphactor_test (bool verbose)
         zclock_sleep(10);
     }
     long end = zclock_usecs();
-    zsys_info("Actors spawned in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
+    zsys_info("250 Actors spawned in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
     zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
     zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
     zclock_sleep(200);
-    sphactor_t *itr = (sphactor_t *)zlist_first(spawned_actors);
     while (zlist_size(spawned_actors) > 0)
     {
         sphactor_t *act = zlist_pop(spawned_actors);
