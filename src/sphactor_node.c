@@ -59,18 +59,20 @@ sphactor_node_new (zsock_t *pipe, void *args)
     assert( shim );
     self->handler = shim->handler;
     self->handler_args = shim->args;
+    self->uuid = shim->uuid;
+    self->name = shim->name;
 
-    // TODO can we pass the uuid?
-    self->uuid = NULL;
     if ( self->uuid == NULL)
     {
         self->uuid = zuuid_new ();
     }
-    //  TODO can we pass the name?
     //  Default name for node is first 6 characters of UUID:
     //  the shorter string is more readable in logs
-    self->name = (char *) zmalloc (7);
-    memcpy (self->name, zuuid_str (self->uuid), 6);
+    if ( self->name == NULL )
+    {
+        self->name = (char *) zmalloc (7);
+        memcpy (self->name, zuuid_str (self->uuid), 6);
+    }
 
     // setup a pub socket
     self->endpoint = (char *)malloc( (9 + strlen(zuuid_str(self->uuid) ) )  * sizeof(char) );

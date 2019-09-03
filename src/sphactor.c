@@ -53,7 +53,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     if (uuid)
         self->uuid = zuuid_dup(uuid);
 
-    sphactor_shim_t shim = { handler, NULL };
+    sphactor_shim_t shim = { handler, args, uuid, name };
     self->actor = zactor_new( sphactor_node_actor, &shim);
 
     if (name)
@@ -86,6 +86,8 @@ sphactor_destroy (sphactor_t **self_p)
     }
 }
 
+
+// caller does not own the uuid!
 zuuid_t *
 sphactor_uuid (sphactor_t *self)
 {
@@ -256,29 +258,29 @@ sphactor_test (bool verbose)
     assert (self);
     zuuid_t *uuidtest = sphactor_uuid(self);
     assert(uuidtest);
-    //assert( zuuid_eq(uuid, zuuid_data(uuid2) ) );
     //  name should be the first 6 chars from the uuid
     const char *name = sphactor_name( self );
     char *name2 = (char *) zmalloc (7);
     memcpy (name2, zuuid_str(uuidtest), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
-
+    //zuuid_destroy(&uuidtest); //sphactor_uuid is owner of the pointer!
     sphactor_destroy (&self);
-//    //  Simple create/destroy/name/uuid test with specified uuid
-//    zuuid_t *uuid = zuuid_new();
-//    self = sphactor_new ( NULL, uuid);
-//    assert (self);
-//    uuidtest = sphactor_uuid(self);
-//    assert(uuidtest);
-//    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
-//    //  name should be the first 6 chars from the uuid
-//    name = sphactor_name( self );
-//    name2 = (char *) zmalloc (7);
-//    memcpy (name2, zuuid_str(uuid), 6);
-//    assert( streq ( name, name2 ));
-//    zstr_free(&name2);
-//    sphactor_destroy (&self);
+
+    //  Simple create/destroy/name/uuid test with specified uuid
+    zuuid_t *uuid = zuuid_new();
+    self = sphactor_new ( NULL, NULL, NULL, uuid);
+    assert (self);
+    uuidtest = sphactor_uuid(self);
+    assert(uuidtest);
+    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
+    //  name should be the first 6 chars from the uuid
+    name = sphactor_name( self );
+    name2 = (char *) zmalloc (7);
+    memcpy (name2, zuuid_str(uuid), 6);
+    assert( streq ( name, name2 ));
+    zstr_free(&name2);
+    sphactor_destroy (&self);
 
     //  Simple create/destroy/connect/disconnect test
     sphactor_t *pub = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
@@ -323,23 +325,41 @@ sphactor_test (bool verbose)
     sphactor_destroy (&hello1);
     sphactor_destroy (&hello2);
 
-    // mega spawn test
+    /* *** mega spawn test
+     *
+     *  The maximum number of sphactors is determined by a number of factors:
+     *  (a) first we have the OS open files limit (see ulimit -n on *nix) usually 1024
+     *  (b) zactor uses two file descriptors per instance for signaling and communications
+     *  (c) sphactor uses two file desciptors for the pub and sub socket per instance.
+     *  (d) every process on *nix gets 3 file descriptors for stdout/-in/-err
+     *
+     *  Theoretically this gives us the following equation for the maximum number of (sph)actors
+     *  n = (a/(b+c))-d i.e. (1024/(2+2))-3 = 253
+     *  In practice the number is 252
+     *
+     */
     long start = zclock_usecs();
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
-    for (int i=0; i<100; i++)
+    for (int i=0; i<250; i++)
     {
         sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
-        zsys_info("Sphactor %s spawned", sphactor_name(spawn));
+        if (verbose)
+            zsys_info("Sphactor number %d %s spawned", i+1, sphactor_name(spawn));
+        else {
+            sphactor_name(spawn);   // to cache the name (somehow NAME ends up in actor) Hello actor DB0A21 says: NAME
+        }
         if (prev)
             sphactor_connect(prev, sphactor_endpoint(spawn));
         zlist_append(spawned_actors, spawn);
         prev = spawn;
+        zclock_sleep(10);
     }
+    long end = zclock_usecs();
+    zsys_info("Actors spawned in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
+    zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
     zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
-    long end = zclock_usecs();
-    zsys_info("Actors spawned and kickstarted in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
     zclock_sleep(200);
     sphactor_t *itr = (sphactor_t *)zlist_first(spawned_actors);
     while (zlist_size(spawned_actors) > 0)

@@ -23,7 +23,9 @@
 // structure to pass to the zactor
 typedef struct {
     sphactor_handler_fn *handler;  // our handler
-    void* args;     // arguments for the handler
+    void* args;       // arguments for the handler
+    zuuid_t* uuid;    // uuid for the actor (NULL for auto generated)
+    const char* name; // name for the actor (NULL for auto generated)
 } sphactor_shim_t;
 
 #endif
