@@ -78,7 +78,7 @@ SPHACTOR_EXPORT zsock_t *
 
 //  Set the verbosity of the node.
 SPHACTOR_EXPORT void
-    sphactor_set_verbose (sphactor_t *self, bool_t *on);
+    sphactor_set_verbose (sphactor_t *self, bool on);
 
 //  Self test of this class.
 SPHACTOR_EXPORT void

@@ -62,7 +62,7 @@
 
     <method name = "set verbose">
         Set the verbosity of the node. 
-        <argument name = "on" type = "bool" />
+        <argument name = "on" type = "boolean" />
     </method>
 
 </class>
