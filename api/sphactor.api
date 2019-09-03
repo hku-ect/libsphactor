@@ -60,5 +60,10 @@
         <return type = "zsock" />
     </method>
 
+    <method name = "set verbose">
+        Set the verbosity of the node. 
+        <argument name = "on" type = "bool" />
+    </method>
+
 </class>
     

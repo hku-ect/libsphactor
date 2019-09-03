@@ -76,6 +76,10 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT zsock_t *
     sphactor_socket (sphactor_t *self);
 
+//  Set the verbosity of the node.
+SPHACTOR_EXPORT void
+    sphactor_set_verbose (sphactor_t *self, bool_t *on);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_test (bool verbose);
