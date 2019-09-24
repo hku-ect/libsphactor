@@ -36,10 +36,6 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
 };
 
-// forward decl
-static zmsg_t *
-hello_sphactor(sphactor_event_t *ev, void *args);
-
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
