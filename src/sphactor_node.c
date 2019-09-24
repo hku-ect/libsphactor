@@ -75,7 +75,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
     }
 
     // setup a pub socket
-    self->endpoint = (char *)malloc( (9 + strlen(zuuid_str(self->uuid) ) )  * sizeof(char) );
+    self->endpoint = (char *)malloc( (10 + strlen(zuuid_str(self->uuid) ) )  * sizeof(char) );
     sprintf( self->endpoint, "inproc://%s", zuuid_str(self->uuid) );
     self->pub = zsock_new( ZMQ_PUB );
     assert(self->pub);
@@ -434,6 +434,7 @@ sphactor_node_test (bool verbose)
     char *name2 = (char *) zmalloc (7);
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
+    zstr_free(&name);
 
     // set the name and acquire it
     zstr_sendm(sphactor_node, "SET NAME");
@@ -474,10 +475,15 @@ sphactor_node_test (bool verbose)
     // connect producer to consumer
     zstr_sendm(sphactor_node, "CONNECT");
     zstr_send(sphactor_node, prod_endpoint);
-    zsys_info("%s %s %s", zstr_recv(sphactor_node), zstr_recv(sphactor_node), zstr_recv(sphactor_node));
+    char *msg1 = zstr_recv(sphactor_node);
+    char *msg2 = zstr_recv(sphactor_node);
+    char *msg3 = zstr_recv(sphactor_node);
+    zsys_info("%s %s %s", msg1, msg2, msg3);
     zstr_send(sphactor_producer, "TRIGGER");
     zclock_sleep(10);   //  prevent destroy before ping being handled
-
+    zstr_free(&msg1);
+    zstr_free(&msg2);
+    zstr_free(&msg3);
 
     zsock_destroy(&sub);
     zsock_destroy(&pub);

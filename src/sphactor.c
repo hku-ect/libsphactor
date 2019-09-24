@@ -210,7 +210,9 @@ hello_sphactor(sphactor_event_t *ev, void *args)
 {
     assert(ev->msg);
     //  just echo what we receive
-    zsys_info("Hello actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Hello actor %s says: %s", ev->name, cmd);
+    zstr_free(&cmd);
     // if there are strings left publish them
     if ( zmsg_size(ev->msg) > 0 )
     {
@@ -224,7 +226,9 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
 {
     assert(ev->msg);
     // just echo what we receive
-    zsys_info("Hello2 actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Hello2 actor %s says: %s", ev->name, cmd);
+    zstr_free(&cmd);
     // if there are strings left publish them
     if ( zmsg_size(ev->msg) > 0 )
     {
@@ -290,7 +294,7 @@ sphactor_test (bool verbose)
     const char *subendp = sphactor_endpoint(sub);
     zuuid_t *puuid = sphactor_uuid(pub);
     zuuid_t *suuid = sphactor_uuid(sub);
-    char *endpointest = (char *)malloc( (9 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );
+    char *endpointest = (char *)malloc( (10 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );
     sprintf( endpointest, "inproc://%s", zuuid_str(puuid));
     assert( streq( pubendp, endpointest));
     sprintf( endpointest, "inproc://%s", zuuid_str(suuid));
