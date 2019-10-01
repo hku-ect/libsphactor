@@ -221,6 +221,10 @@ hello_sphactor(sphactor_event_t *ev, void *args)
     {
         return ev->msg;
     }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
     return NULL;
 }
 
@@ -237,6 +241,10 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
     {
         return ev->msg;
     }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
     return NULL;
 }
 
@@ -250,7 +258,15 @@ spawn_sphactor(sphactor_event_t *ev, void *args)
     zstr_free(&msg);
     // if there are strings left publish them
     zmsg_addstrf( ev->msg, "HELLO from %s", ev->name);
-    return ev->msg;
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
+    return NULL;
 }
 
 void
