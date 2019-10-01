@@ -151,8 +151,10 @@ sphactor_connect (sphactor_t *self, const char *endpoint)
     zstr_free(&cmd);
     zstr_free(&dest);
     zstr_free(&rc);
+    zmsg_destroy(&response);
 
-    return rci;}
+    return rci;
+}
 
 int
 sphactor_disconnect (sphactor_t *self, const char *endpoint)
@@ -171,6 +173,7 @@ sphactor_disconnect (sphactor_t *self, const char *endpoint)
     zstr_free(&cmd);
     zstr_free(&dest);
     zstr_free(&rcc);
+    zmsg_destroy(&response);
 
     return rci;
 }
@@ -242,7 +245,9 @@ spawn_sphactor(sphactor_event_t *ev, void *args)
 {
     assert(ev->msg);
     //  just echo what we receive
-    zsys_info("Hello actor %s says: %s", ev->name, zmsg_popstr(ev->msg));
+    char *msg = zmsg_popstr(ev->msg);
+    zsys_info("Hello actor %s says: %s", ev->name, msg);
+    zstr_free(&msg);
     // if there are strings left publish them
     zmsg_addstrf( ev->msg, "HELLO from %s", ev->name);
     return ev->msg;
@@ -257,12 +262,12 @@ sphactor_test (bool verbose)
     //  Simple create/destroy/name/uuid test
     sphactor_t *self = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (self);
-    zuuid_t *uuidtest = sphactor_uuid(self);
+    const zuuid_t *uuidtest = sphactor_uuid(self);
     assert(uuidtest);
     //  name should be the first 6 chars from the uuid
     const char *name = sphactor_name( self );
     char *name2 = (char *) zmalloc (7);
-    memcpy (name2, zuuid_str(uuidtest), 6);
+    memcpy (name2, zuuid_str((zuuid_t *)uuidtest), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
     //zuuid_destroy(&uuidtest); //sphactor_uuid is owner of the pointer!
@@ -371,6 +376,7 @@ sphactor_test (bool verbose)
         sphactor_destroy( &act );
     }
     assert(zlist_size(spawned_actors) == 0);
+    zlist_destroy(&spawned_actors);
     zsys_info("destroyed spawned actors");
     //  @end
     printf ("OK\n");
