@@ -148,11 +148,14 @@ sphactor_connect (sphactor_t *self, const char *endpoint)
     char *rc = zmsg_popstr(response);
     assert ( streq(rc, "0") );
     int rci = streq(rc, "0") ? 0 : -1;
+    
     zstr_free(&cmd);
     zstr_free(&dest);
     zstr_free(&rc);
+    zmsg_destroy(&response);
 
-    return rci;}
+    return rci;
+}
 
 int
 sphactor_disconnect (sphactor_t *self, const char *endpoint)

@@ -216,6 +216,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_sendm (self->pipe, "CONNECTED");
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
+        free(dest);
     }
     else
     if (streq (command, "DISCONNECT"))
@@ -225,6 +226,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_sendm (self->pipe, "DISCONNECTED");
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
+        free(dest);
     }
     else
     if (streq (command, "UUID"))
@@ -359,7 +361,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
     zsock_signal (self->pipe, 0);
 
     while (!self->terminated) {
-        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, -1);
+        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, 1000/60);
         if (which == self->pipe)
             sphactor_node_recv_api (self);
         //  if a sub socket then process actor
@@ -377,6 +379,25 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             {
                 // publish the msg
                 zmsg_send(&retmsg, self->pub);
+                
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL ) {
+                    zmsg_destroy(&retmsg);
+                }
+            }
+        }
+        else if ( which == NULL ) {
+            sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
+            {
+                // publish the msg
+                zmsg_send(&retmsg, self->pub);
+                
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL ) {
+                    zmsg_destroy(&retmsg);
+                }
             }
         }
         zsock_t *sub = zhash_first( self->subs );
