@@ -443,6 +443,25 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             {
                 // publish the msg
                 zmsg_send(&retmsg, self->pub);
+                
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL ) {
+                    zmsg_destroy(&retmsg);
+                }
+            }
+        }
+        else if ( which == NULL ) {
+            sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
+            {
+                // publish the msg
+                zmsg_send(&retmsg, self->pub);
+                
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL ) {
+                    zmsg_destroy(&retmsg);
+                }
             }
         }
         else if ( which == NULL )

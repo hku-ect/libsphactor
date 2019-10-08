@@ -148,6 +148,7 @@ sphactor_connect (sphactor_t *self, const char *endpoint)
     char *rc = zmsg_popstr(response);
     assert ( streq(rc, "0") );
     int rci = streq(rc, "0") ? 0 : -1;
+    
     zstr_free(&cmd);
     zstr_free(&dest);
     zstr_free(&rc);
@@ -190,6 +191,38 @@ sphactor_set_verbose (sphactor_t *self, bool on)
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
     zstr_sendf( self->actor, "%d", on);
+}
+
+zconfig_t *
+sphactor_zconfig_new( const char* fileName )
+{
+    zconfig_t *root = zconfig_new("root", NULL);
+    
+    //TODO: basic setup?
+    return root;
+}
+
+zconfig_t *
+sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
+{
+    zconfig_t *znodes = zconfig_locate (root, "nodes");
+    if ( znodes == NULL ) {
+        znodes = zconfig_new("nodes", root);
+    }
+    
+    zconfig_t *curNode = zconfig_new("node", znodes);
+    
+    zconfig_t *zuuid, *zname, *zendpoint;
+    zuuid = zconfig_new("uuid", curNode);
+    zname = zconfig_new("name", curNode);
+    zendpoint = zconfig_new("endpoint", curNode);
+    
+    sphactor_uuid (self);
+    zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
+    zconfig_set_value(zname, "%s", self->name);
+    zconfig_set_value(zendpoint, "%s", self->endpoint);
+    
+    return curNode;
 }
 
 //  --------------------------------------------------------------------------
