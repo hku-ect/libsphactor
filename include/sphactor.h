@@ -80,6 +80,12 @@ SPHACTOR_EXPORT zsock_t *
 SPHACTOR_EXPORT void
     sphactor_set_verbose (sphactor_t *self, bool on);
 
+SPHACTOR_EXPORT zconfig_t *
+    sphactor_zconfig_new( const char* fileName );
+
+SPHACTOR_EXPORT zconfig_t *
+    sphactor_zconfig_append (sphactor_t *self, zconfig_t *root);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_test (bool verbose);
