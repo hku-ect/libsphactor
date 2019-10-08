@@ -41,6 +41,20 @@
         <argument name = "name" type = "string" />
     </method>
 
+    <method name = "set rate">
+        Set the iteration rate of this sphactor node. For example "60" runs 
+        the method of the actor 60 times per second. Note that the 
+        method receives a NULL message if it is triggered by timed event 
+        as opposed to when triggered by a socket event.
+        <argument name = "rate" type = "float" />
+    </method>
+
+    <method name = "get rate">
+        Return the current rate of this sphactor node. By default the rate is -1 
+        which means only triggers on socket events.
+        <return type = "float" />
+    </method>
+
     <method name = "connect">
         Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
         failure.

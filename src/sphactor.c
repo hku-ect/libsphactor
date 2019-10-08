@@ -244,6 +244,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 static zmsg_t *
 hello_sphactor(sphactor_event_t *ev, void *args)
 {
+    if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
     //  just echo what we receive
     char *cmd = zmsg_popstr(ev->msg);
@@ -264,6 +265,7 @@ hello_sphactor(sphactor_event_t *ev, void *args)
 static zmsg_t *
 hello_sphactor2(sphactor_event_t *ev, void *args)
 {
+    if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
     // just echo what we receive
     char *cmd = zmsg_popstr(ev->msg);
@@ -284,6 +286,7 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
 static zmsg_t *
 spawn_sphactor(sphactor_event_t *ev, void *args)
 {
+    if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
     //  just echo what we receive
     char *msg = zmsg_popstr(ev->msg);

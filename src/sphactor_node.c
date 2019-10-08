@@ -36,6 +36,7 @@ struct _sphactor_node_t {
     char        *name;            //  Our name (defaults to first 6 chars of our uuid)
     zhash_t     *subs;            //  a list of our subscription sockets
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
+    int         timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
@@ -61,6 +62,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->handler_args = shim->args;
     self->uuid = shim->uuid;
     self->name = shim->name;
+    self->timeout = -1;
 
     if ( self->uuid == NULL)
     {
@@ -145,7 +147,6 @@ sphactor_node_start (sphactor_node_t *self)
 
     return 0;
 }
-
 
 //  Stop this actor. Return a value greater or equal to zero if stopping
 //  was successful. Otherwise -1.
@@ -252,7 +253,8 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
     {
-        zmsg_t *retmsg = self->handler(NULL, self->handler_args);
+        sphactor_event_t ev = { NULL, "SOC", self->name, self->uuid };
+        zmsg_t *retmsg = self->handler( &ev, self->handler_args);
         if (retmsg)
         {
             //publish it
@@ -269,6 +271,16 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "SET VERBOSE"))
         self->verbose = true;
+    else
+    if (streq (command, "SET RATE"))
+    {
+        char *rate =  zmsg_popstr(request);
+        //  rate is per second, timeout is in ms
+        self->timeout = 1000./(float) atof(rate);
+    }
+    else
+    if (streq (command, "RATE"))
+        zstr_sendf(self->pipe, "%.1f", self->timeout == -1 ? self->timeout : 62.5);
     else
     if (streq (command, "$TERM"))
         //  The $TERM command is send by zactor_destroy() method
@@ -316,6 +328,7 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest)
 static zmsg_t *
 sph_actor_producer(sphactor_event_t *ev, void *args)
 {
+    if ( ev->msg == NULL ) return NULL;
     static int count = 0;
     if ( ev == NULL )
     {
@@ -340,6 +353,11 @@ sph_actor_producer(sphactor_event_t *ev, void *args)
 static zmsg_t *
 sph_actor_consumer(sphactor_event_t *ev, void *args)
 {
+    if ( ev->msg == NULL )
+    {
+        zsys_info("Timed event!");
+        return NULL;
+    }
     assert( ev->msg );
     char *cmd = zmsg_popstr( ev->msg );
     assert( streq(cmd, "PING") );
@@ -356,6 +374,13 @@ sph_actor_consumer(sphactor_event_t *ev, void *args)
     {
         zmsg_destroy(&ev->msg);
     }
+    return NULL;
+}
+
+static zmsg_t *
+sph_actor_rate_test(sphactor_event_t *ev, void *args)
+{
+    assert( ev->msg == NULL );
     return NULL;
 }
 
@@ -377,14 +402,35 @@ sphactor_node_actor (zsock_t *pipe, void *args)
 
     //  Signal actor successfully initiated
     zsock_signal (self->pipe, 0);
+    int64_t time_till_next = self->timeout;
+    int64_t time_next = zclock_mono() + self->timeout;
+    if ( self->timeout == -1)
+    {
+        time_till_next = -1;
+        time_next = INT_MAX;
+    }
 
     while (!self->terminated) {
-        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, 1000/60);
-        if (which == self->pipe)
-            sphactor_node_recv_api (self);
-        //  if a sub socket then process actor
+        //  determine poller timeout
+        if ( zclock_mono() > time_next )
+        {
+            zsys_error("Sphactor_node: %s, is falling behind! Consider decreasing it's rate if this happens often", self->name);
+            time_till_next = 0;
+        }
         else
-        if ( which == self->sub ) {
+        {
+            time_till_next = time_next - zclock_mono();
+        }
+        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, (int)time_till_next );
+        if (self->timeout > 0 ) time_next = zclock_mono() + self->timeout;
+        if (which == self->pipe)
+        {
+            sphactor_node_recv_api (self);
+            //  api can change the timeout!
+            if (self->timeout > 0 ) time_next = zclock_mono() + self->timeout;
+        }
+        //  if a sub socket then process actor
+        else if ( which == self->sub ) {
             zmsg_t *msg = zmsg_recv(which);
             if (!msg)
             {
@@ -418,17 +464,29 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 }
             }
         }
-        zsock_t *sub = zhash_first( self->subs );
-        while ( sub )
+        else if ( which == NULL )
         {
-            if ( which == sub )
+            //  timed events don't carry a message instead NULL is passed
+            sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
             {
-                //  run the actor's handle
-                //self->handler
-                break;
+                // publish the msg
+                zmsg_send(&retmsg, self->pub);
             }
         }
-
+        else {
+            zsock_t *sub = zhash_first( self->subs );
+            while ( sub )
+            {
+                if ( which == sub )
+                {
+                    //  run the actor's handle
+                    //self->handler
+                    break;
+                }
+            }
+        }
     }
     sphactor_node_destroy (&self);
 }
@@ -534,6 +592,24 @@ sphactor_node_test (bool verbose)
     zstr_free(&name2);
     zactor_destroy (&sphactor_node);
     zactor_destroy (&sphactor_producer);
+
+    // timeout test
+    sphactor_shim_t rate_tester = { &sph_actor_rate_test, NULL, NULL, NULL };
+    zactor_t *sphactor_rate_tester = zactor_new (sphactor_node_actor, &rate_tester);
+    assert(sphactor_rate_tester);
+    int64_t start = zclock_mono();
+    zstr_send(sphactor_rate_tester, "RATE");
+    zclock_sleep(1000/60);
+    char *ret = zstr_recv(sphactor_rate_tester);
+    assert( streq( ret, "-1.0") );
+    zstr_sendm(sphactor_rate_tester, "SET RATE");
+    zstr_send(sphactor_rate_tester, "60");
+    zstr_send(sphactor_rate_tester, "RATE");
+    ret = zstr_recv(sphactor_rate_tester);
+    assert( streq( ret, "62.5") );
+    zstr_free(&ret);
+    zclock_sleep(1000/60);
+    zactor_destroy (&sphactor_rate_tester);
     //  @end
 
     printf ("OK\n");
