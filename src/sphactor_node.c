@@ -216,7 +216,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_sendm (self->pipe, "CONNECTED");
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
-        free(dest);
+        zstr_free(&dest);
     }
     else
     if (streq (command, "DISCONNECT"))
@@ -226,7 +226,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_sendm (self->pipe, "DISCONNECTED");
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
-        free(dest);
+        zstr_free(&dest);
     }
     else
     if (streq (command, "UUID"))
@@ -326,7 +326,15 @@ sph_actor_producer(sphactor_event_t *ev, void *args)
         return msg;
     }
     assert( ev->msg );
-    return ev->msg;
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
+    return NULL;
 }
 
 static zmsg_t *
@@ -338,6 +346,16 @@ sph_actor_consumer(sphactor_event_t *ev, void *args)
     char *count = zmsg_popstr( ev->msg );
     assert( strlen(count) == 1 );
     zsys_info("consumer received %s %s", cmd, count );
+    zstr_free(&count);
+    zstr_free(&cmd);
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
     return NULL;
 }
 
@@ -475,6 +493,9 @@ sphactor_node_test (bool verbose)
     zstr_send(sphactor_node, "SEND");
     char *name3 = zstr_recv(sub);
     assert( streq ( testname, name3 ));
+    zstr_free(&endpoint);
+    zstr_free(&testname);
+    zstr_free(&name3);
 
     //  send a ping to the consumer
     zsock_t *pub = zsock_new_pub("inproc://bla");
@@ -505,6 +526,7 @@ sphactor_node_test (bool verbose)
     zstr_free(&msg1);
     zstr_free(&msg2);
     zstr_free(&msg3);
+    zstr_free(&prod_endpoint);
 
     zsock_destroy(&sub);
     zsock_destroy(&pub);
