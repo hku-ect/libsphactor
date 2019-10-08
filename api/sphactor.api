@@ -46,13 +46,13 @@
         the method of the actor 60 times per second. Note that the 
         method receives a NULL message if it is triggered by timed event 
         as opposed to when triggered by a socket event.
-        <argument name = "rate" type = "float" />
+        <argument name = "rate" type = "real" size="4" />
     </method>
 
     <method name = "get rate">
         Return the current rate of this sphactor node. By default the rate is -1 
         which means only triggers on socket events.
-        <return type = "float" />
+        <return type = "real" size = "4" />
     </method>
 
     <method name = "connect">
@@ -79,5 +79,16 @@
         <argument name = "on" type = "boolean" />
     </method>
 
+    <method name = "zconfig new" singleton="1">
+        Create new zconfig
+        <argument name = "filename" type="string" mutable="0" />
+        <return type = "zconfig" />
+    </method>
+    
+    <method name = "zconfig append">
+        Append to zconfig
+        <argument name = "root" type="zconfig" />
+        <return type = "zconfig" />
+    </method>
 </class>
     
