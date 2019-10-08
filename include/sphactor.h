@@ -67,11 +67,11 @@ SPHACTOR_EXPORT void
 //  method receives a NULL message if it is triggered by timed event
 //  as opposed to when triggered by a socket event.
 SPHACTOR_EXPORT void
-    sphactor_set_rate (sphactor_t *self, float_t *rate);
+    sphactor_set_rate (sphactor_t *self, float rate);
 
 //  Return the current rate of this sphactor node. By default the rate is -1
 //  which means only triggers on socket events.
-SPHACTOR_EXPORT float_t *
+SPHACTOR_EXPORT float
     sphactor_get_rate (sphactor_t *self);
 
 //  Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
@@ -92,9 +92,11 @@ SPHACTOR_EXPORT zsock_t *
 SPHACTOR_EXPORT void
     sphactor_set_verbose (sphactor_t *self, bool on);
 
+//  Create new zconfig
 SPHACTOR_EXPORT zconfig_t *
-    sphactor_zconfig_new( const char* fileName );
+    sphactor_zconfig_new (const char *filename);
 
+//  Append to zconfig
 SPHACTOR_EXPORT zconfig_t *
     sphactor_zconfig_append (sphactor_t *self, zconfig_t *root);
 
