@@ -194,7 +194,7 @@ sphactor_set_verbose (sphactor_t *self, bool on)
 }
 
 zconfig_t *
-sphactor_zconfig_new( const char* fileName )
+sphactor_zconfig_new( const char* filename )
 {
     zconfig_t *root = zconfig_new("root", NULL);
     
