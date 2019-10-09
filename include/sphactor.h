@@ -62,17 +62,19 @@ SPHACTOR_EXPORT const char *
 SPHACTOR_EXPORT void
     sphactor_set_name (sphactor_t *self, const char *name);
 
-//  Set the iteration rate of this sphactor node. For example "60" runs
-//  the method of the actor 60 times per second. Note that the
-//  method receives a NULL message if it is triggered by timed event
-//  as opposed to when triggered by a socket event.
+//  Set the timeout of this sphactor node. This is used for the timeout
+//  of the poller so the sphactor is looped for a fixed interval. Note
+//  that the sphactor's method receives a NULL message if it is
+//  triggered by timeout event as opposed to when triggered by a socket
+//  event. By default the timeout is -1 implying it never timeouts.
 SPHACTOR_EXPORT void
-    sphactor_set_rate (sphactor_t *self, float rate);
+    sphactor_set_timeout (sphactor_t *self, int64_t timeout);
 
-//  Return the current rate of this sphactor node. By default the rate is -1
-//  which means only triggers on socket events.
-SPHACTOR_EXPORT float
-    sphactor_get_rate (sphactor_t *self);
+//  Return the current timeout of this sphactor node's poller. By default
+//  the timeout is -1 which means it never times out but only triggers
+//  on socket events.
+SPHACTOR_EXPORT int64_t
+    sphactor_get_timeout (sphactor_t *self);
 
 //  Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
 //  failure.
