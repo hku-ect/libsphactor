@@ -277,6 +277,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
         char *rate =  zmsg_popstr(request);
         //  rate is per second, timeout is in ms
         self->timeout = (int64_t) atol(rate);
+        zstr_free(&rate);
     }
     else
     if (streq (command, "TIMEOUT"))
@@ -446,6 +447,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 
                 // delete message if we have no connections (otherwise it leaks)
                 if ( zsock_endpoint(self->pub) == NULL ) {
+                    //TODO: figure out if this destroys individual frames as well...
                     zmsg_destroy(&retmsg);
                 }
             }

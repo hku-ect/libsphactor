@@ -94,7 +94,7 @@ sphactor_uuid (sphactor_t *self)
         // I'm not sure if this is safe if there's already a queue
         // on the actor's pipe???
         zstr_send(self->actor, "UUID");
-        self->uuid = zuuid_new(); // or just malloc it?
+        //self->uuid = zuuid_new(); // or just malloc it?
         int rc = zsock_recv( self->actor, "U", &self->uuid );
         assert ( rc==0 );
         assert ( self->uuid );
