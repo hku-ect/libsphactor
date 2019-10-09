@@ -41,24 +41,26 @@
         <argument name = "name" type = "string" />
     </method>
 
-    <method name = "set rate">
-        Set the iteration rate of this sphactor node. For example "60" runs 
-        the method of the actor 60 times per second. Note that the 
-        method receives a NULL message if it is triggered by timed event 
-        as opposed to when triggered by a socket event.
-        <argument name = "rate" type = "real" size="4" />
+    <method name = "set timeout">
+        Set the timeout of this sphactor node. This is used for the timeout 
+        of the poller so the sphactor is looped for a fixed interval. Note
+        that the sphactor's method receives a NULL message if it is 
+        triggered by timeout event as opposed to when triggered by a socket 
+        event. By default the timeout is -1 implying it never timeouts.
+        <argument name = "timeout" type = "msecs" />
     </method>
 
-    <method name = "get rate">
-        Return the current rate of this sphactor node. By default the rate is -1 
-        which means only triggers on socket events.
-        <return type = "real" size = "4" />
+    <method name = "get timeout">
+        Return the current timeout of this sphactor node's poller. By default 
+        the timeout is -1 which means it never times out but only triggers 
+        on socket events.
+        <return type = "msecs" />
     </method>
 
     <method name = "connect">
         Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
         failure.
-	<argument name = "endpoint" type="string" />
+        <argument name = "endpoint" type="string" />
         <return type = "integer" />
     </method>
 

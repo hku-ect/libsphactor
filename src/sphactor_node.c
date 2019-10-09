@@ -36,7 +36,7 @@ struct _sphactor_node_t {
     char        *name;            //  Our name (defaults to first 6 chars of our uuid)
     zhash_t     *subs;            //  a list of our subscription sockets
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
-    int         timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
+    int64_t     timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
@@ -272,16 +272,16 @@ sphactor_node_recv_api (sphactor_node_t *self)
     if (streq (command, "SET VERBOSE"))
         self->verbose = true;
     else
-    if (streq (command, "SET RATE"))
+    if (streq (command, "SET TIMEOUT"))
     {
         char *rate =  zmsg_popstr(request);
         //  rate is per second, timeout is in ms
-        self->timeout = 1000./(float) atof(rate);
+        self->timeout = (int64_t) atol(rate);
         zstr_free(&rate);
     }
     else
-    if (streq (command, "RATE"))
-        zstr_sendf(self->pipe, "%.1f", self->timeout == -1 ? self->timeout : 62.5);
+    if (streq (command, "TIMEOUT"))
+        zstr_sendf(self->pipe, "%i", self->timeout);
     else
     if (streq (command, "$TERM"))
         //  The $TERM command is send by zactor_destroy() method
@@ -600,15 +600,14 @@ sphactor_node_test (bool verbose)
     zactor_t *sphactor_rate_tester = zactor_new (sphactor_node_actor, &rate_tester);
     assert(sphactor_rate_tester);
     int64_t start = zclock_mono();
-    zstr_send(sphactor_rate_tester, "RATE");
-    zclock_sleep(1000/60);
+    zstr_send(sphactor_rate_tester, "TIMEOUT");
     char *ret = zstr_recv(sphactor_rate_tester);
-    assert( streq( ret, "-1.0") );
-    zstr_sendm(sphactor_rate_tester, "SET RATE");
-    zstr_send(sphactor_rate_tester, "60");
-    zstr_send(sphactor_rate_tester, "RATE");
+    assert( streq( ret, "-1") );
+    zstr_sendm(sphactor_rate_tester, "SET TIMEOUT");
+    zstr_send(sphactor_rate_tester, "16");
+    zstr_send(sphactor_rate_tester, "TIMEOUT");
     ret = zstr_recv(sphactor_rate_tester);
-    assert( streq( ret, "62.5") );
+    assert( streq( ret, "16") );
     zstr_free(&ret);
     zclock_sleep(1000/60);
     zactor_destroy (&sphactor_rate_tester);
