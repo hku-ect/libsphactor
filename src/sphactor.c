@@ -212,15 +212,15 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     zconfig_t *curNode = zconfig_new("node", znodes);
     
-    zconfig_t *zuuid, *zname, *zendpoint;
+    zconfig_t *zuuid, *ztype, *zendpoint;
     zuuid = zconfig_new("uuid", curNode);
-    zname = zconfig_new("name", curNode);
+    ztype = zconfig_new("type", curNode);
     zendpoint = zconfig_new("endpoint", curNode);
     
     sphactor_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    zconfig_set_value(zname, "%s", self->name);
-    zconfig_set_value(zendpoint, "%s", self->endpoint);
+    zconfig_set_value(ztype, "%s", self->name);
+    zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
     
     return curNode;
 }
@@ -430,6 +430,41 @@ sphactor_test (bool verbose)
     assert(zlist_size(spawned_actors) == 0);
     zlist_destroy(&spawned_actors);
     zsys_info("destroyed spawned actors");
+    
+    // actor serialization test
+    // create two actors
+    sphactor_t *actor1 = sphactor_new(NULL, NULL, "Actor 1", NULL);
+    sphactor_t *actor2 = sphactor_new(NULL, NULL, "Actor 2", NULL);
+    
+    // save to zconfig file
+    const char* fileName = "testsave.txt";
+    zconfig_t * config = sphactor_zconfig_new(fileName);
+    sphactor_zconfig_append(actor1, config);
+    sphactor_zconfig_append(actor2, config);
+    zconfig_save(config, fileName);
+    
+    zconfig_destroy(&config);
+    
+    // load zconfig file, find nodes
+    config = zconfig_load(fileName);
+    zconfig_t *nodes = zconfig_locate(config, "nodes");
+    zconfig_t *node1 = zconfig_locate(nodes, "node");
+    zconfig_t *node2 = zconfig_next(node1);
+    
+    char* node1uuid = zconfig_value(zconfig_locate(node1, "uuid"));
+    char* node2uuid = zconfig_value(zconfig_locate(node2, "uuid"));
+    
+    // check that the saved uuid's are correct
+    zsys_info("%s == %s", zuuid_str(actor1->uuid), node1uuid);
+    zsys_info("%s == %s", zuuid_str(actor2->uuid), node2uuid);
+    
+    assert(streq(zuuid_str(actor1->uuid),node1uuid));
+    assert(streq(zuuid_str(actor2->uuid),node2uuid));
+    
+    zconfig_destroy(&config);
+    sphactor_destroy(&actor1);
+    sphactor_destroy(&actor2);
+    
     //  @end
     printf ("OK\n");
 }
