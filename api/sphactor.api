@@ -7,13 +7,13 @@
         <return type = "zmsg" />
     </callback_type>
 
-    <method name = "sph_register" singleton = "1">
+    <method name = "register" singleton = "1">
         <argument name = "typename" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
         <return type = "integer"/>
     </method>
     
-    <method name = "sph_unregister" singleton = "1">
+    <method name = "unregister" singleton = "1">
         <argument name = "typename" type = "string"/>
         <return type = "integer"/>
     </method>

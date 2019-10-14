@@ -46,11 +46,11 @@ SPHACTOR_EXPORT void
 
 //
 SPHACTOR_EXPORT int
-    sphactor_sph_register (const char *typename, sphactor_handler_fn handler);
+    sphactor_register (const char *typename, sphactor_handler_fn handler);
 
 //
 SPHACTOR_EXPORT int
-    sphactor_sph_unregister (const char *typename);
+    sphactor_unregister (const char *typename);
 
 //  Return our sphactor's UUID string, after successful initialization
 SPHACTOR_EXPORT zuuid_t *
