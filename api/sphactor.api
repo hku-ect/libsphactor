@@ -8,14 +8,14 @@
     </callback_type>
 
     <method name = "sph_register" singleton = "1">
-        <argument name = "typename" type = "string">
-        <argument name = "handler" type = "sphactor_handler_fn callback = "1">
-        <return type = "integer">
+        <argument name = "typename" type = "string"/>
+        <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
+        <return type = "integer"/>
     </method>
     
     <method name = "sph_unregister" singleton = "1">
-        <argument name = "typename" type = "string">
-        <return type = "integer">
+        <argument name = "typename" type = "string"/>
+        <return type = "integer"/>
     </method>
 
     <constructor>
