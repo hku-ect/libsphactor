@@ -40,6 +40,10 @@ typedef zmsg_t * (sphactor_handler_fn) (
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
 
+//  Constructor, creates a new Sphactor node by its typename.
+SPHACTOR_EXPORT sphactor_t *
+    sphactor_new_by_type (const char *typename, void *arg, const char *name, zuuid_t *uuid);
+
 //  Destructor, destroys a Sphactor node.
 SPHACTOR_EXPORT void
     sphactor_destroy (sphactor_t **self_p);

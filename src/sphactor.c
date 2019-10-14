@@ -36,6 +36,9 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
 };
 
+//  Hash table for the typename register of actors
+static zhash_t *actors_reg = NULL;
+
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
@@ -61,6 +64,17 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     return self;
 }
 
+sphactor_t *
+sphactor_new_by_type (const char *typename, void *args, const char *name, zuuid_t *uuid)
+{
+    sphactor_handler_fn *handler = (sphactor_handler_fn *) zhash_lookup( actors_reg, typename);
+    if ( handler == NULL )
+    {
+        zsys_error("%s type does not exist as a registered type", typename);
+        return NULL;
+    }
+    return sphactor_new( *handler, args, name, uuid);
+}
 
 //  --------------------------------------------------------------------------
 //  Destroy the sphactor
@@ -224,8 +238,6 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     return curNode;
 }
-
-static zhash_t *actors_reg = NULL;
 
 int
 sphactor_register(const char *typename, sphactor_handler_fn handler)
