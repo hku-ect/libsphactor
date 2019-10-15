@@ -545,7 +545,6 @@ sphactor_test (bool verbose)
     assert(streq(zuuid_str(actor1->uuid),node1uuid));
     assert(streq(zuuid_str(actor2->uuid),node2uuid));
     
-    zconfig_remove(&config);
     remove(fileName);
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
