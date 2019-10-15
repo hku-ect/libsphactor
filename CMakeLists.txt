@@ -6,7 +6,7 @@
 ########################################################################
 # Project setup
 ########################################################################
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0)
 project(libsphactor)
 enable_language(C)
 enable_testing()
@@ -25,7 +25,7 @@ set(pkg_config_names_private "")
 ########################################################################
 # options
 ########################################################################
-if (NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE) 
     if (EXISTS "${SOURCE_DIR}/.git")
         set (CMAKE_BUILD_TYPE Debug)
     else ()
@@ -209,11 +209,15 @@ ENDIF (NOT MSVC)
 
 # shared
 if (SPHACTOR_BUILD_SHARED)
-  IF (MSVC)
+  IF (APPLE)
     add_library(sphactor SHARED ${sphactor_sources})
-  ELSE (MSVC)
-    add_library(sphactor SHARED $<TARGET_OBJECTS:sphactor_objects>)
-  ENDIF (MSVC)
+  ELSE (APPLE)
+    IF (MSVC)
+      add_library(sphactor SHARED ${sphactor_sources})
+    ELSE (MSVC)
+     add_library(sphactor SHARED $<TARGET_OBJECTS:sphactor_objects>)
+    ENDIF (MSVC)
+  ENDIF(APPLE)
 
   set_target_properties (sphactor PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -245,11 +249,11 @@ endif()
 
 # static
 if (SPHACTOR_BUILD_STATIC)
-  IF (MSVC)
+  #IF (MSVC)
     add_library(sphactor-static STATIC ${sphactor_sources})
-  ELSE (MSVC)
-    add_library(sphactor-static STATIC $<TARGET_OBJECTS:sphactor_objects>)
-  ENDIF (MSVC)
+  #ELSE (MSVC)
+  #  add_library(sphactor-static STATIC $<TARGET_OBJECTS:sphactor_objects>)
+  #ENDIF (MSVC)
 
   set_target_properties(sphactor-static PROPERTIES
     PUBLIC_HEADER "${public_headers}"
