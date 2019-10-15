@@ -235,12 +235,12 @@ sphactor_zconfig_new( const char* filename )
 zconfig_t *
 sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 {
-    zconfig_t *znodes = zconfig_locate (root, "nodes");
+    zconfig_t *znodes = zconfig_locate (root, "actors");
     if ( znodes == NULL ) {
-        znodes = zconfig_new("nodes", root);
+        znodes = zconfig_new("actors", root);
     }
     
-    zconfig_t *curNode = zconfig_new("node", znodes);
+    zconfig_t *curNode = zconfig_new("actor", znodes);
     
     zconfig_t *zuuid, *ztype, *zendpoint;
     zuuid = zconfig_new("uuid", curNode);
@@ -285,6 +285,15 @@ sphactor_unregister( const char *actor_type)
     zhash_delete( actors_reg, actor_type );
     return 0;
 }
+
+//
+//  If there was no such item, this function does nothing.
+zlist_t *
+sphactor_get_registered ()
+{
+    return zhash_keys(actors_reg);
+}
+
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
@@ -518,8 +527,8 @@ sphactor_test (bool verbose)
     
     // load zconfig file, find nodes
     config = zconfig_load(fileName);
-    zconfig_t *nodes = zconfig_locate(config, "nodes");
-    zconfig_t *node1 = zconfig_locate(nodes, "node");
+    zconfig_t *nodes = zconfig_locate(config, "actors");
+    zconfig_t *node1 = zconfig_locate(nodes, "actor");
     zconfig_t *node2 = zconfig_next(node1);
     
     char* node1uuid = zconfig_value(zconfig_locate(node1, "uuid"));
