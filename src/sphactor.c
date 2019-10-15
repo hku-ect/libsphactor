@@ -30,13 +30,13 @@
 
 struct _sphactor_t {
     zactor_t *actor;            //  A Sphactor instance wraps a zactor
-    char    *name;              //  Copy of our node's name
-    zuuid_t *uuid;              //  Copy of our node's uuid
-    char    *endpoint;          //  Copy of our node's endpoint
-    zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
+    char    *name;              //  Copy of our actor's name
+    zuuid_t *uuid;              //  Copy of our actor's uuid
+    char    *endpoint;          //  Copy of our actor's endpoint
+    zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
 };
 
-//  Hash table for the typename register of actors
+//  Hash table for the actor_type register of actors
 static zhash_t *actors_reg = NULL;
 
 //  --------------------------------------------------------------------------
@@ -65,12 +65,12 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 }
 
 sphactor_t *
-sphactor_new_by_type (const char *typename, void *args, const char *name, zuuid_t *uuid)
+sphactor_new_by_type (const char *actor_type, void *args, const char *name, zuuid_t *uuid)
 {
-    sphactor_handler_fn *handler = (sphactor_handler_fn *) zhash_lookup( actors_reg, typename);
+    sphactor_handler_fn *handler = (sphactor_handler_fn *) zhash_lookup( actors_reg, actor_type);
     if ( handler == NULL )
     {
-        zsys_error("%s type does not exist as a registered type", typename);
+        zsys_error("%s type does not exist as a registered actor type", actor_type);
         return NULL;
     }
     return sphactor_new( *handler, args, name, uuid);
@@ -129,6 +129,14 @@ sphactor_name (sphactor_t *self)
 }
 
 const char *
+sphactor_actor_type (sphactor_t *self)
+{
+    assert(self);
+    zstr_send(self->actor, "TYPE");
+    return zstr_recv( self->actor );
+}
+
+const char *
 sphactor_endpoint (sphactor_t *self)
 {
     assert(self);
@@ -147,6 +155,14 @@ sphactor_set_name (sphactor_t *self, const char *name)
     assert (self);
     assert (name);
     zstr_sendx (self->actor, "SET NAME", name, NULL);
+}
+
+void
+sphactor_set_actor_type (sphactor_t *self, const char *actor_type)
+{
+    assert (self);
+    assert (actor_type);
+    zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
 
 int
@@ -240,33 +256,33 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 }
 
 int
-sphactor_register(const char *typename, sphactor_handler_fn handler)
+sphactor_register(const char *actor_type, sphactor_handler_fn handler)
 {
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
-    char *item = zhash_lookup(actors_reg, typename);
+    char *item = zhash_lookup(actors_reg, actor_type);
     if ( item != NULL )
     {
-        zsys_error("%s is already registered", typename);
+        zsys_error("%s is already registered", actor_type);
         return -1;
     }
-    int rc = zhash_insert(actors_reg, typename, handler);
+    int rc = zhash_insert(actors_reg, actor_type, handler);
     assert( rc == 0 );
     return rc;
 }
 
-//  Unregister a typename specified by key from the actors_reg hash table.
+//  Unregister a actor_type specified by key from the actors_reg hash table.
 //  If there was no such item, this function does nothing.
 int
-sphactor_unregister( const char *typename)
+sphactor_unregister( const char *actor_type)
 {
-    char *item = zhash_lookup(actors_reg, typename);
+    char *item = zhash_lookup(actors_reg, actor_type);
     if ( item == NULL )
     {
-        zsys_error("no %s type is found", typename);
+        zsys_error("no %s type is found", actor_type);
         return -1;
     }
     //  this will not touch running actors!!!
-    zhash_delete( actors_reg, typename );
+    zhash_delete( actors_reg, actor_type );
     return 0;
 }
 //  --------------------------------------------------------------------------
