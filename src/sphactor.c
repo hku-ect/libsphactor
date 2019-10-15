@@ -235,21 +235,23 @@ sphactor_zconfig_new( const char* filename )
 zconfig_t *
 sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 {
-    zconfig_t *znodes = zconfig_locate (root, "nodes");
+    zconfig_t *znodes = zconfig_locate (root, "actors");
     if ( znodes == NULL ) {
-        znodes = zconfig_new("nodes", root);
+        znodes = zconfig_new("actors", root);
     }
     
-    zconfig_t *curNode = zconfig_new("node", znodes);
+    zconfig_t *curNode = zconfig_new("actor", znodes);
     
-    zconfig_t *zuuid, *ztype, *zendpoint;
+    zconfig_t *zuuid, *ztype, *zname, *zendpoint;
     zuuid = zconfig_new("uuid", curNode);
     ztype = zconfig_new("type", curNode);
+    zname = zconfig_new("name", curNode);
     zendpoint = zconfig_new("endpoint", curNode);
     
     sphactor_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    zconfig_set_value(ztype, "%s", self->name);
+    zconfig_set_value(ztype, "%s", sphactor_actor_type(self));
+    zconfig_set_value(zname, "%s", self->name);
     zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
     
     return curNode;
@@ -285,6 +287,17 @@ sphactor_unregister( const char *actor_type)
     zhash_delete( actors_reg, actor_type );
     return 0;
 }
+
+//
+//  Returns keys list of registered actor types (can be empty if no actors were registered)
+//   Implementations are expected to register themselves prior to requesting this list.
+zlist_t *
+sphactor_get_registered ()
+{
+    if ( actors_reg == NULL ) actors_reg = zhash_new();
+    return zhash_keys(actors_reg);
+}
+
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
@@ -402,7 +415,7 @@ sphactor_test (bool verbose)
     assert (self);
     uuidtest = sphactor_uuid(self);
     assert(uuidtest);
-    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
+    assert( zuuid_eq(uuid, zuuid_data((zuuid_t*)uuidtest) ) );
     //  name should be the first 6 chars from the uuid
     name = sphactor_name( self );
     name2 = (char *) zmalloc (7);
@@ -518,8 +531,8 @@ sphactor_test (bool verbose)
     
     // load zconfig file, find nodes
     config = zconfig_load(fileName);
-    zconfig_t *nodes = zconfig_locate(config, "nodes");
-    zconfig_t *node1 = zconfig_locate(nodes, "node");
+    zconfig_t *nodes = zconfig_locate(config, "actors");
+    zconfig_t *node1 = zconfig_locate(nodes, "actor");
     zconfig_t *node2 = zconfig_next(node1);
     
     char* node1uuid = zconfig_value(zconfig_locate(node1, "uuid"));

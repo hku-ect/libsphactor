@@ -56,6 +56,10 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_unregister (const char *actor_type);
 
+//
+SPHACTOR_EXPORT zlist_t *
+    sphactor_get_registered (void);
+
 //  Return our sphactor's UUID string, after successful initialization
 SPHACTOR_EXPORT zuuid_t *
     sphactor_uuid (sphactor_t *self);

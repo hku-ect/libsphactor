@@ -18,6 +18,10 @@
         <return type = "integer"/>
     </method>
 
+    <method name = "get registered" singleton = "1">
+        <return type = "zlist"/>
+    </method>
+
     <constructor>
         Constructor, creates a new Sphactor node. 
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1" />
