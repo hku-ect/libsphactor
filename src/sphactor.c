@@ -287,10 +287,12 @@ sphactor_unregister( const char *actor_type)
 }
 
 //
-//  If there was no such item, this function does nothing.
+//  Returns keys list of registered actor types (can be empty if no actors were registered)
+//   Implementations are expected to register themselves prior to requesting this list.
 zlist_t *
 sphactor_get_registered ()
 {
+    if ( actors_reg == NULL ) actors_reg = zhash_new();
     return zhash_keys(actors_reg);
 }
 
