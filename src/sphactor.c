@@ -242,14 +242,16 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     zconfig_t *curNode = zconfig_new("actor", znodes);
     
-    zconfig_t *zuuid, *ztype, *zendpoint;
+    zconfig_t *zuuid, *ztype, *zname, *zendpoint;
     zuuid = zconfig_new("uuid", curNode);
     ztype = zconfig_new("type", curNode);
+    zname = zconfig_new("name", curNode);
     zendpoint = zconfig_new("endpoint", curNode);
     
     sphactor_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    zconfig_set_value(ztype, "%s", self->name);
+    zconfig_set_value(ztype, "%s", sphactor_actor_type(self));
+    zconfig_set_value(zname, "%s", self->name);
     zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
     
     return curNode;
