@@ -212,7 +212,7 @@ sphactor_disconnect (sphactor_t *self, const char *endpoint)
 zsock_t *
 sphactor_socket(sphactor_t *self)
 {
-    return zactor_resolve(self->actor);
+    return (zsock_t*)zactor_resolve(self->actor);
 }
 
 void
@@ -261,7 +261,7 @@ int
 sphactor_register(const char *actor_type, sphactor_handler_fn handler)
 {
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
-    char *item = zhash_lookup(actors_reg, actor_type);
+    char *item = (char*)zhash_lookup(actors_reg, actor_type);
     if ( item != NULL )
     {
         zsys_error("%s is already registered", actor_type);
@@ -277,7 +277,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler)
 int
 sphactor_unregister( const char *actor_type)
 {
-    char *item = zhash_lookup(actors_reg, actor_type);
+    char *item = (char*)zhash_lookup(actors_reg, actor_type);
     if ( item == NULL )
     {
         zsys_error("no %s type is found", actor_type);
@@ -386,11 +386,11 @@ sphactor_test (bool verbose)
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor);
-    sphactor_handler_fn *item = zhash_lookup(actors_reg, "hello");
+    sphactor_handler_fn *item = (sphactor_handler_fn*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert( item == &hello_sphactor );
     sphactor_unregister("hello");
-    item = zhash_lookup(actors_reg, "hello");
+    item = (sphactor_handler_fn*)zhash_lookup(actors_reg, "hello");
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
 
@@ -508,7 +508,7 @@ sphactor_test (bool verbose)
     zclock_sleep(200);
     while (zlist_size(spawned_actors) > 0)
     {
-        sphactor_t *act = zlist_pop(spawned_actors);
+        sphactor_t *act = (sphactor_t *)zlist_pop(spawned_actors);
         sphactor_destroy( &act );
     }
     assert(zlist_size(spawned_actors) == 0);

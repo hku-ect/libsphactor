@@ -271,6 +271,9 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "SET NAME"))
     {
+        if ( self->name == NULL ) {
+            zstr_free(&self->name);
+        }
         self->name = zmsg_popstr(request);
         assert(self->name);
     }
@@ -278,6 +281,9 @@ sphactor_node_recv_api (sphactor_node_t *self)
     if (streq (command, "SET TYPE"))
     {
         // TODO: free before new assignment?
+        if ( self->actor_type == NULL ) {
+            zstr_free(&self->actor_type);
+        }
         self->actor_type = zmsg_popstr(request);
         assert(self->actor_type);
     }
@@ -547,6 +553,7 @@ sphactor_node_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name);
+    zuuid_destroy(&uuid);
 
     // set the name and acquire it
     zstr_sendm(sphactor_node, "SET NAME");
