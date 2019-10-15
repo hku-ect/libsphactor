@@ -49,6 +49,12 @@
         <return type = "string" />
     </method>
 
+    <method name = "actor type">
+        Return our sphactor's type, after successful initialization. 
+        NULL by default.
+        <return type = "string" />
+    </method>
+
     <method name = "endpoint">
         Return our sphactor's endpoint, after successful initialization. 
         The endpoint is usually inproc://{uuid}
@@ -58,6 +64,11 @@
     <method name = "set name">
         Set the public name of this sphactor node overriding the default. 
         <argument name = "name" type = "string" />
+    </method>
+
+    <method name = "set actor type">
+        Set the actor's type. 
+        <argument name = "actor_type" type = "string" />
     </method>
 
     <method name = "set timeout">

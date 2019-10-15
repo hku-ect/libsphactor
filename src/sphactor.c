@@ -30,10 +30,10 @@
 
 struct _sphactor_t {
     zactor_t *actor;            //  A Sphactor instance wraps a zactor
-    char    *name;              //  Copy of our node's name
-    zuuid_t *uuid;              //  Copy of our node's uuid
-    char    *endpoint;          //  Copy of our node's endpoint
-    zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
+    char    *name;              //  Copy of our actor's name
+    zuuid_t *uuid;              //  Copy of our actor's uuid
+    char    *endpoint;          //  Copy of our actor's endpoint
+    zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
 };
 
 //  Hash table for the actor_type register of actors
@@ -129,6 +129,14 @@ sphactor_name (sphactor_t *self)
 }
 
 const char *
+sphactor_actor_type (sphactor_t *self)
+{
+    assert(self);
+    zstr_send(self->actor, "TYPE");
+    return zstr_recv( self->actor );
+}
+
+const char *
 sphactor_endpoint (sphactor_t *self)
 {
     assert(self);
@@ -147,6 +155,14 @@ sphactor_set_name (sphactor_t *self, const char *name)
     assert (self);
     assert (name);
     zstr_sendx (self->actor, "SET NAME", name, NULL);
+}
+
+void
+sphactor_set_actor_type (sphactor_t *self, const char *actor_type)
+{
+    assert (self);
+    assert (actor_type);
+    zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
 
 int

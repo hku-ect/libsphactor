@@ -34,6 +34,7 @@ struct _sphactor_node_t {
     char        *endpoint;        //  Our endpoint string (based on uuid)
     zuuid_t     *uuid;            //  Our UUID identifier
     char        *name;            //  Our name (defaults to first 6 chars of our uuid)
+    char        *actor_type;      //  Our actors typename (defaults to NULL)
     zhash_t     *subs;            //  a list of our subscription sockets
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
     int64_t     timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
@@ -62,6 +63,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->handler_args = shim->args;
     self->uuid = shim->uuid;
     self->name = shim->name;
+    self->actor_type = NULL;
     self->timeout = -1;
 
     if ( self->uuid == NULL)
@@ -116,6 +118,8 @@ sphactor_node_destroy (sphactor_node_t **self_p)
         zpoller_destroy (&self->poller);
         zuuid_destroy(&self->uuid);
         zstr_free(&self->name);
+        if ( self->actor_type )
+            zstr_free(&self->actor_type);
         zstr_free(&self->endpoint);
         zsock_destroy(&self->pub);
         zsock_destroy(&self->sub);
@@ -238,6 +242,9 @@ sphactor_node_recv_api (sphactor_node_t *self)
     if (streq (command, "NAME"))
         zstr_send ( self->pipe, self->name );
     else
+    if (streq (command, "TYPE"))
+        zstr_send ( self->pipe, self->actor_type ? self->actor_type : "" );
+    else
     if (streq (command, "ENDPOINT"))
         zstr_send ( self->pipe, self->endpoint );
     else
@@ -267,6 +274,13 @@ sphactor_node_recv_api (sphactor_node_t *self)
     {
         self->name = zmsg_popstr(request);
         assert(self->name);
+    }
+    else
+    if (streq (command, "SET TYPE"))
+    {
+        // TODO: free before new assignment?
+        self->actor_type = zmsg_popstr(request);
+        assert(self->actor_type);
     }
     else
     if (streq (command, "SET VERBOSE"))

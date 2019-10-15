@@ -40,9 +40,9 @@ typedef zmsg_t * (sphactor_handler_fn) (
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
 
-//  Constructor, creates a new Sphactor node by its actor_type.
+//  Constructor, creates a new Sphactor node by its typename.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new_by_type (const char *actor_type, void *arg, const char *name, zuuid_t *uuid);
+    sphactor_new_by_type (const char *typename, void *arg, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor node.
 SPHACTOR_EXPORT void
@@ -65,6 +65,11 @@ SPHACTOR_EXPORT zuuid_t *
 SPHACTOR_EXPORT const char *
     sphactor_name (sphactor_t *self);
 
+//  Return our sphactor's type, after successful initialization.
+//  NULL by default.
+SPHACTOR_EXPORT const char *
+    sphactor_actor_type (sphactor_t *self);
+
 //  Return our sphactor's endpoint, after successful initialization.
 //  The endpoint is usually inproc://{uuid}
 SPHACTOR_EXPORT const char *
@@ -73,6 +78,10 @@ SPHACTOR_EXPORT const char *
 //  Set the public name of this sphactor node overriding the default.
 SPHACTOR_EXPORT void
     sphactor_set_name (sphactor_t *self, const char *name);
+
+//  Set the actor's type.
+SPHACTOR_EXPORT void
+    sphactor_set_actor_type (sphactor_t *self, const char *actor_type);
 
 //  Set the timeout of this sphactor node. This is used for the timeout
 //  of the poller so the sphactor is looped for a fixed interval. Note
