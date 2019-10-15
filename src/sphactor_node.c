@@ -61,7 +61,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->handler = shim->handler;
     self->handler_args = shim->args;
     self->uuid = shim->uuid;
-    self->name = shim->name;
+    self->name = (char*)shim->name;
     self->timeout = -1;
 
     if ( self->uuid == NULL)
@@ -101,7 +101,6 @@ sphactor_node_new (zsock_t *pipe, void *args)
 
     return self;
 }
-
 
 //  --------------------------------------------------------------------------
 //  Destroy the sphactor_node instance
@@ -253,7 +252,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
     {
-        sphactor_event_t ev = { NULL, "SOC", self->name, self->uuid };
+        sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
         zmsg_t *retmsg = self->handler( &ev, self->handler_args);
         if (retmsg)
         {
@@ -281,7 +280,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     }
     else
     if (streq (command, "TIMEOUT"))
-        zstr_sendf(self->pipe, "%i", self->timeout);
+        zstr_sendf(self->pipe, "%lli", self->timeout);
     else
     if (streq (command, "$TERM"))
         //  The $TERM command is send by zactor_destroy() method

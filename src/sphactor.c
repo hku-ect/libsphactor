@@ -331,7 +331,7 @@ sphactor_test (bool verbose)
     assert (self);
     uuidtest = sphactor_uuid(self);
     assert(uuidtest);
-    assert( zuuid_eq(uuid, zuuid_data(uuidtest) ) );
+    assert( zuuid_eq(uuid, zuuid_data((zuuid_t*)uuidtest) ) );
     //  name should be the first 6 chars from the uuid
     name = sphactor_name( self );
     name2 = (char *) zmalloc (7);
