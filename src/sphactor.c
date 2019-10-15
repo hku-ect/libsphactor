@@ -36,6 +36,9 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our node's (incoming) connections
 };
 
+//  Hash table for the typename register of actors
+static zhash_t *actors_reg = NULL;
+
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
@@ -61,6 +64,17 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     return self;
 }
 
+sphactor_t *
+sphactor_new_by_type (const char *typename, void *args, const char *name, zuuid_t *uuid)
+{
+    sphactor_handler_fn *handler = (sphactor_handler_fn *) zhash_lookup( actors_reg, typename);
+    if ( handler == NULL )
+    {
+        zsys_error("%s type does not exist as a registered type", typename);
+        return NULL;
+    }
+    return sphactor_new( *handler, args, name, uuid);
+}
 
 //  --------------------------------------------------------------------------
 //  Destroy the sphactor
@@ -225,6 +239,36 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     return curNode;
 }
 
+int
+sphactor_register(const char *typename, sphactor_handler_fn handler)
+{
+    if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
+    char *item = zhash_lookup(actors_reg, typename);
+    if ( item != NULL )
+    {
+        zsys_error("%s is already registered", typename);
+        return -1;
+    }
+    int rc = zhash_insert(actors_reg, typename, handler);
+    assert( rc == 0 );
+    return rc;
+}
+
+//  Unregister a typename specified by key from the actors_reg hash table.
+//  If there was no such item, this function does nothing.
+int
+sphactor_unregister( const char *typename)
+{
+    char *item = zhash_lookup(actors_reg, typename);
+    if ( item == NULL )
+    {
+        zsys_error("no %s type is found", typename);
+        return -1;
+    }
+    //  this will not touch running actors!!!
+    zhash_delete( actors_reg, typename );
+    return 0;
+}
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
@@ -309,6 +353,17 @@ void
 sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
+
+    // register unregister test
+    actors_reg = zhash_new();
+    sphactor_register("hello", &hello_sphactor);
+    sphactor_handler_fn *item = zhash_lookup(actors_reg, "hello");
+    assert(item);
+    assert( item == &hello_sphactor );
+    sphactor_unregister("hello");
+    item = zhash_lookup(actors_reg, "hello");
+    assert( item == NULL );
+    assert( zhash_size(actors_reg) == 0 );
 
     //  @selftest
     //  Simple create/destroy/name/uuid test
