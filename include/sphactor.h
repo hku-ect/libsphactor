@@ -40,9 +40,9 @@ typedef zmsg_t * (sphactor_handler_fn) (
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
 
-//  Constructor, creates a new Sphactor node by its typename.
+//  Constructor, creates a new Sphactor node by its actor_type.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new_by_type (const char *typename, void *arg, const char *name, zuuid_t *uuid);
+    sphactor_new_by_type (const char *actor_type, void *arg, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor node.
 SPHACTOR_EXPORT void
@@ -50,11 +50,11 @@ SPHACTOR_EXPORT void
 
 //
 SPHACTOR_EXPORT int
-    sphactor_register (const char *typename, sphactor_handler_fn handler);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler);
 
 //
 SPHACTOR_EXPORT int
-    sphactor_unregister (const char *typename);
+    sphactor_unregister (const char *actor_type);
 
 //  Return our sphactor's UUID string, after successful initialization
 SPHACTOR_EXPORT zuuid_t *

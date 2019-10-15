@@ -8,13 +8,13 @@
     </callback_type>
 
     <method name = "register" singleton = "1">
-        <argument name = "typename" type = "string"/>
+        <argument name = "actor_type" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
         <return type = "integer"/>
     </method>
     
     <method name = "unregister" singleton = "1">
-        <argument name = "typename" type = "string"/>
+        <argument name = "actor_type" type = "string"/>
         <return type = "integer"/>
     </method>
 
