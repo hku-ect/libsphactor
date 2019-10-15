@@ -7,9 +7,28 @@
         <return type = "zmsg" />
     </callback_type>
 
+    <method name = "register" singleton = "1">
+        <argument name = "typename" type = "string"/>
+        <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
+        <return type = "integer"/>
+    </method>
+    
+    <method name = "unregister" singleton = "1">
+        <argument name = "typename" type = "string"/>
+        <return type = "integer"/>
+    </method>
+
     <constructor>
         Constructor, creates a new Sphactor node. 
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1" />
+        <argument name = "arg" type = "anything" optional = "1" />
+        <argument name = "name" type = "string" optional = "1" />
+        <argument name = "uuid" type = "zuuid" optional = "1" />
+    </constructor>
+
+    <constructor name = "new_by_type">
+        Constructor, creates a new Sphactor node by its typename. 
+        <argument name = "typename" type = "string" />
         <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
         <argument name = "uuid" type = "zuuid" optional = "1" />
