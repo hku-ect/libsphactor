@@ -28,7 +28,7 @@
 
     <constructor name = "new_by_type">
         Constructor, creates a new Sphactor node by its typename. 
-        <argument name = "typename" type = "string" />
+        <argument name = "actor_type" type = "string" />
         <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
         <argument name = "uuid" type = "zuuid" optional = "1" />
