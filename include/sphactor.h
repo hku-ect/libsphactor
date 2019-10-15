@@ -42,7 +42,7 @@ SPHACTOR_EXPORT sphactor_t *
 
 //  Constructor, creates a new Sphactor node by its typename.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new_by_type (const char *typename, void *arg, const char *name, zuuid_t *uuid);
+    sphactor_new_by_type (const char *actor_type, void *arg, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor node.
 SPHACTOR_EXPORT void
