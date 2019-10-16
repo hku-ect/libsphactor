@@ -31,6 +31,7 @@ dist:
 # Set CI_REQUIRE_GOOD_CLANG_FORMAT=true to fail if "clang-format" check is not clean
 env:
   global:
+    - SPHACTOR_SOCKET_LIMIT=20
     - CI_TIME=false
     - CI_TRACE=false
     - CI_CONFIG_QUIET=true

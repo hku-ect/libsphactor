@@ -487,10 +487,19 @@ sphactor_test (bool verbose)
     long start = zclock_usecs();
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
-    // we'll start 250 actors which will be formed into a single chain.
+    
+    //TODO: Set this variable from an environment variable
+    int limit = 250;
+    char *limitStr = getenv("SPHACTOR_SOCKET_LIMIT");
+    if ( limitStr != NULL ) {
+        limit = atoi(limitStr);
+        zstr_free(&limitStr);
+    }
+    
+    // we'll start sockLim actors which will be formed into a single chain.
     // each actor will send hello to the connected actor, wich is started
     // from the last created actor
-    for (int i=0; i<250; i++)
+    for (int i=0; i<limit; i++)
     {
         sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
         if (verbose)
