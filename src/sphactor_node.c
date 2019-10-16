@@ -546,7 +546,7 @@ sphactor_node_test (bool verbose)
     assert (sphactor_node);
     // acquire the uuid
     zstr_send(sphactor_node, "UUID");
-    zuuid_t *uuid = zuuid_new();
+    zuuid_t *uuid;
     int rc = zsock_recv( sphactor_node, "U", &uuid );
     assert ( rc==0 );
     assert ( uuid );
@@ -633,7 +633,10 @@ sphactor_node_test (bool verbose)
     zstr_sendm(sphactor_rate_tester, "SET TIMEOUT");
     zstr_send(sphactor_rate_tester, "16");
     zstr_send(sphactor_rate_tester, "TIMEOUT");
+    
+    zstr_free(&ret);
     ret = zstr_recv(sphactor_rate_tester);
+    
     assert( streq( ret, "16") );
     zstr_free(&ret);
     zclock_sleep(1000/60);
