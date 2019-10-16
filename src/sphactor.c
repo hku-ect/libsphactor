@@ -57,7 +57,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     if (name)
     {
-        self->name = strdup(name);
+        //self->name = strdup(name);
         sphactor_set_name( self, name );
     }
 
@@ -250,9 +250,12 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     sphactor_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    zconfig_set_value(ztype, "%s", sphactor_actor_type(self));
+    char* type = (char*)sphactor_actor_type(self);
+    zconfig_set_value(ztype, "%s", type);
     zconfig_set_value(zname, "%s", self->name);
     zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
+    
+    zstr_free(&type);
     
     return curNode;
 }
@@ -393,6 +396,7 @@ sphactor_test (bool verbose)
     item = (sphactor_handler_fn*)zhash_lookup(actors_reg, "hello");
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
+    zhash_destroy(&actors_reg);
 
     //  @selftest
     //  Simple create/destroy/name/uuid test
@@ -519,6 +523,8 @@ sphactor_test (bool verbose)
     // create two actors
     sphactor_t *actor1 = sphactor_new(NULL, NULL, "Actor 1", NULL);
     sphactor_t *actor2 = sphactor_new(NULL, NULL, "Actor 2", NULL);
+    sphactor_set_actor_type(actor1, "Type1");
+    sphactor_set_actor_type(actor2, "Type2");
     
     // save to zconfig file
     const char* fileName = "testsave.txt";

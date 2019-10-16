@@ -62,7 +62,6 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->handler = shim->handler;
     self->handler_args = shim->args;
     self->uuid = shim->uuid;
-    self->name = (char*)shim->name;
     self->actor_type = NULL;
     self->timeout = -1;
 
@@ -76,6 +75,12 @@ sphactor_node_new (zsock_t *pipe, void *args)
     {
         self->name = (char *) zmalloc (7);
         memcpy (self->name, zuuid_str (self->uuid), 6);
+    }
+    else {
+        // If we pass a string literal, we can't free self->name on destroy...
+        //  so malloc and memcpy
+        self->name = (char *) zmalloc (strlen(shim->name));
+        memcpy (self->name, shim->name, strlen(shim->name));
     }
 
     // setup a pub socket
@@ -271,7 +276,9 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "SET NAME"))
     {
-        if ( self->name == NULL ) {
+        //TODO: There are two cases here, if it was set from a string literal, this crashes
+        //  if it was allocated, and we skip this, it leaks
+        if ( self->name != NULL ) {
             zstr_free(&self->name);
         }
         self->name = zmsg_popstr(request);
@@ -280,8 +287,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "SET TYPE"))
     {
-        // TODO: free before new assignment?
-        if ( self->actor_type == NULL ) {
+        if ( self->actor_type != NULL ) {
             zstr_free(&self->actor_type);
         }
         self->actor_type = zmsg_popstr(request);
@@ -553,6 +559,7 @@ sphactor_node_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name);
+    zstr_free(&name2);
     zuuid_destroy(&uuid);
 
     // set the name and acquire it
