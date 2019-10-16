@@ -488,12 +488,14 @@ sphactor_test (bool verbose)
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
     
+    rc = putenv("SPHACTOR_SOCKET_LIMIT=250");
+    assert(rc==0);
+    
     //TODO: Set this variable from an environment variable
     int limit = 250;
     char *limitStr = getenv("SPHACTOR_SOCKET_LIMIT");
     if ( limitStr != NULL ) {
         limit = atoi(limitStr);
-        zstr_free(&limitStr);
     }
     
     // we'll start sockLim actors which will be formed into a single chain.
@@ -514,7 +516,7 @@ sphactor_test (bool verbose)
         zclock_sleep(10);
     }
     long end = zclock_usecs();
-    zsys_info("250 Actors spawned in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
+    zsys_info("%i Actors spawned in %d microseconds (%.6f ms)", limit, end-start, (end-start)/1000.f);
     zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
     zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
