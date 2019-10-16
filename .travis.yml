@@ -12,6 +12,8 @@ os:
 - linux
 - osx
 
+osx_image: xcode11
+
 # The default distro for env:/matrix:/* and unspecified-dist matrix:/* tests;
 # for the latter see also addons/apt/sources with the package repos in use.
 # See https://docs.travis-ci.com/user/reference/overview/ for up-to-date

@@ -270,7 +270,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler)
         zsys_error("%s is already registered", actor_type);
         return -1;
     }
-    int rc = zhash_insert(actors_reg, actor_type, handler);
+    int rc = zhash_insert(actors_reg, actor_type, (void*)handler);
     assert( rc == 0 );
     return rc;
 }
