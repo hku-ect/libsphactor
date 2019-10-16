@@ -57,7 +57,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     if (name)
     {
-        self->name = strdup(name);
+        //self->name = strdup(name);
         sphactor_set_name( self, name );
     }
 
@@ -212,7 +212,7 @@ sphactor_disconnect (sphactor_t *self, const char *endpoint)
 zsock_t *
 sphactor_socket(sphactor_t *self)
 {
-    return zactor_resolve(self->actor);
+    return (zsock_t*)zactor_resolve(self->actor);
 }
 
 void
@@ -250,9 +250,12 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     sphactor_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    zconfig_set_value(ztype, "%s", sphactor_actor_type(self));
+    char* type = (char*)sphactor_actor_type(self);
+    zconfig_set_value(ztype, "%s", type);
     zconfig_set_value(zname, "%s", self->name);
     zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
+    
+    zstr_free(&type);
     
     return curNode;
 }
@@ -261,13 +264,13 @@ int
 sphactor_register(const char *actor_type, sphactor_handler_fn handler)
 {
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
-    char *item = zhash_lookup(actors_reg, actor_type);
+    char *item = (char*)zhash_lookup(actors_reg, actor_type);
     if ( item != NULL )
     {
         zsys_error("%s is already registered", actor_type);
         return -1;
     }
-    int rc = zhash_insert(actors_reg, actor_type, handler);
+    int rc = zhash_insert(actors_reg, actor_type, (void*)handler);
     assert( rc == 0 );
     return rc;
 }
@@ -277,7 +280,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler)
 int
 sphactor_unregister( const char *actor_type)
 {
-    char *item = zhash_lookup(actors_reg, actor_type);
+    char *item = (char*)zhash_lookup(actors_reg, actor_type);
     if ( item == NULL )
     {
         zsys_error("no %s type is found", actor_type);
@@ -386,13 +389,14 @@ sphactor_test (bool verbose)
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor);
-    sphactor_handler_fn *item = zhash_lookup(actors_reg, "hello");
+    sphactor_handler_fn *item = (sphactor_handler_fn*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert( item == &hello_sphactor );
     sphactor_unregister("hello");
-    item = zhash_lookup(actors_reg, "hello");
+    item = (sphactor_handler_fn*)zhash_lookup(actors_reg, "hello");
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
+    zhash_destroy(&actors_reg);
 
     //  @selftest
     //  Simple create/destroy/name/uuid test
@@ -483,10 +487,21 @@ sphactor_test (bool verbose)
     long start = zclock_usecs();
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
-    // we'll start 250 actors which will be formed into a single chain.
+    
+    //rc = putenv("SPHACTOR_SOCKET_LIMIT=250");
+    //assert(rc==0);
+    
+    //TODO: Set this variable from an environment variable
+    int limit = 250;
+    char *limitStr = getenv("SPHACTOR_SOCKET_LIMIT");
+    if ( limitStr != NULL ) {
+        limit = atoi(limitStr);
+    }
+    
+    // we'll start sockLim actors which will be formed into a single chain.
     // each actor will send hello to the connected actor, wich is started
     // from the last created actor
-    for (int i=0; i<250; i++)
+    for (int i=0; i<limit; i++)
     {
         sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
         if (verbose)
@@ -501,14 +516,14 @@ sphactor_test (bool verbose)
         zclock_sleep(10);
     }
     long end = zclock_usecs();
-    zsys_info("250 Actors spawned in %d microseconds (%.6f ms)", end-start, (end-start)/1000.f);
+    zsys_info("%i Actors spawned in %d microseconds (%.6f ms)", limit, end-start, (end-start)/1000.f);
     zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
     zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
     zclock_sleep(200);
     while (zlist_size(spawned_actors) > 0)
     {
-        sphactor_t *act = zlist_pop(spawned_actors);
+        sphactor_t *act = (sphactor_t *)zlist_pop(spawned_actors);
         sphactor_destroy( &act );
     }
     assert(zlist_size(spawned_actors) == 0);
@@ -519,6 +534,8 @@ sphactor_test (bool verbose)
     // create two actors
     sphactor_t *actor1 = sphactor_new(NULL, NULL, "Actor 1", NULL);
     sphactor_t *actor2 = sphactor_new(NULL, NULL, "Actor 2", NULL);
+    sphactor_set_actor_type(actor1, "Type1");
+    sphactor_set_actor_type(actor2, "Type2");
     
     // save to zconfig file
     const char* fileName = "testsave.txt";
@@ -545,6 +562,7 @@ sphactor_test (bool verbose)
     assert(streq(zuuid_str(actor1->uuid),node1uuid));
     assert(streq(zuuid_str(actor2->uuid),node2uuid));
     
+    remove(fileName);
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
     sphactor_destroy(&actor2);
