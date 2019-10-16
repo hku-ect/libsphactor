@@ -488,8 +488,8 @@ sphactor_test (bool verbose)
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
     
-    rc = putenv("SPHACTOR_SOCKET_LIMIT=250");
-    assert(rc==0);
+    //rc = putenv("SPHACTOR_SOCKET_LIMIT=250");
+    //assert(rc==0);
     
     //TODO: Set this variable from an environment variable
     int limit = 250;
