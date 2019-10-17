@@ -216,6 +216,14 @@ sphactor_socket(sphactor_t *self)
 }
 
 void
+sphactor_send_msg (sphactor_t *self, zmsg_t *msg)
+{
+    zsock_t* socket = sphactor_socket(self);
+    zstr_send(socket, "SEND MSG");
+    zmsg_send(&msg, socket);
+}
+
+void
 sphactor_set_verbose (sphactor_t *self, bool on)
 {
     assert (self);

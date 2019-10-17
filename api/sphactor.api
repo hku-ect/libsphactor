@@ -110,6 +110,11 @@
         <return type = "zsock" />
     </method>
 
+    <method name = "send msg">
+        Sends a passed message to the actor's pub socket. 
+        <argument name = "msg" type = "zmsg" />
+    </method>
+
     <method name = "set verbose">
         Set the verbosity of the node. 
         <argument name = "on" type = "boolean" />

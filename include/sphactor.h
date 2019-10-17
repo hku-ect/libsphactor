@@ -115,6 +115,10 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT zsock_t *
     sphactor_socket (sphactor_t *self);
 
+//  Sends a passed message to the actor's pub socket.
+SPHACTOR_EXPORT void
+    sphactor_send_msg (sphactor_t *self, zmsg_t *msg);
+
 //  Set the verbosity of the node.
 SPHACTOR_EXPORT void
     sphactor_set_verbose (sphactor_t *self, bool on);

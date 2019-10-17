@@ -238,6 +238,20 @@ sphactor_node_recv_api (sphactor_node_t *self)
         zstr_free(&dest);
     }
     else
+    if (streq (command, "SEND MSG"))
+    {
+        zmsg_t* incoming = zmsg_recv(self->pipe);
+        if ( incoming ) {
+            // publish the msg
+            zmsg_send(&incoming, self->pub);
+            
+            // delete message if we have no connections (otherwise it leaks)
+            if ( zsock_endpoint(self->pub) == NULL ) {
+                zmsg_destroy(&incoming);
+            }
+        }
+    }
+    else
     if (streq (command, "UUID"))
     {
         zsock_send(self->pipe, "U", self->uuid);
