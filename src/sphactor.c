@@ -42,6 +42,7 @@ static zhash_t *actors_reg = NULL;
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
+void sphactor_node_actor(zsock_t *pipe, void *args);
 
 sphactor_t *
 sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t *uuid)

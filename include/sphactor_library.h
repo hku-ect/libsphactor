@@ -67,10 +67,13 @@
 //  These classes are stable or legacy and built in all releases
 typedef struct _sphactor_t sphactor_t;
 #define SPHACTOR_T_DEFINED
+typedef struct _sphactor_node_t sphactor_node_t;
+#define SPHACTOR_NODE_T_DEFINED
 
 
 //  Public classes, each with its own header file
 #include "sphactor.h"
+#include "sphactor_node.h"
 
 #ifdef SPHACTOR_BUILD_DRAFT_API
 

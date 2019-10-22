@@ -1,0 +1,39 @@
+<class name = "sphactor_node" state = "stable">
+
+    <constructor>
+        Constructor, creates a new Sphactor_node instance. 
+        <argument name = "pipe" type = "zsock"  />
+        <argument name = "arg" type = "anything" optional = "1" />
+    </constructor>
+
+
+    <destructor>
+        Destructor, destroys a Sphactor_node. 
+    </destructor>
+
+    <method name = "start">
+        Return our sphactor's UUID string, after successful initialization
+        <return type = "integer" />
+    </method>
+
+    <method name = "stop">
+        Stop the sphactor_node
+        <return type = "integer" />
+    </method>
+
+    <method name = "connect">
+        Connect this sphactor_node to another. Returns 0 on success -1 
+        on failure
+        <argument name="dest" type="string" />
+        <return type = "integer" />
+    </method>
+
+    <method name = "disconnect">
+        Disconnect this sphactor_node to another. Returns 0 on success -1 
+        on failure
+        <argument name="dest" type="string" />
+        <return type = "integer" />
+    </method>
+
+</class>
+    
