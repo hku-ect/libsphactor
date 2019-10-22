@@ -522,16 +522,6 @@ fi
      AC_MSG_RESULT([$enable_dist_cmakefiles])])
 AM_CONDITIONAL(ENABLE_DIST_CMAKEFILES, test "x$enable_dist_cmakefiles" = "xyes")
 
-# Check for hello intent
-AC_ARG_ENABLE([hello],
-    AS_HELP_STRING([--enable-hello],
-        [Compile 'hello' in src [default=yes]]),
-    [enable_hello=$enableval],
-    [enable_hello=yes])
-
-AM_CONDITIONAL([ENABLE_HELLO], [test x$enable_hello != xno])
-AM_COND_IF([ENABLE_HELLO], [AC_MSG_NOTICE([ENABLE_HELLO defined])])
-
 # Check for sphactor_selftest intent
 AC_ARG_ENABLE([sphactor_selftest],
     AS_HELP_STRING([--enable-sphactor_selftest],

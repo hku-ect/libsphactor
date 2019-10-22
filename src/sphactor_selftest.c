@@ -32,14 +32,9 @@ typedef struct {
 
 static test_item_t
 all_tests [] = {
-#ifdef SPHACTOR_BUILD_DRAFT_API
-// Tests for stable/draft private classes:
-// Now built only with --enable-drafts, so even stable builds are hidden behind the flag
-    { "sphactor_node", NULL, true, false, "sphactor_node_test" },
-    { "private_classes", NULL, false, false, "$ALL" }, // compat option for older projects
-#endif // SPHACTOR_BUILD_DRAFT_API
 // Tests for stable public classes:
     { "sphactor", sphactor_test, true, true, NULL },
+    { "sphactor_node", sphactor_node_test, true, true, NULL },
     {NULL, NULL, 0, 0, NULL}          //  Sentinel
 };
 

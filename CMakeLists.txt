@@ -6,7 +6,7 @@
 ########################################################################
 # Project setup
 ########################################################################
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8.12)
 project(libsphactor)
 enable_language(C)
 enable_testing()
@@ -25,7 +25,7 @@ set(pkg_config_names_private "")
 ########################################################################
 # options
 ########################################################################
-if (NOT CMAKE_BUILD_TYPE) 
+if (NOT CMAKE_BUILD_TYPE)
     if (EXISTS "${SOURCE_DIR}/.git")
         set (CMAKE_BUILD_TYPE Debug)
     else ()
@@ -168,7 +168,7 @@ set (sphactor_headers
     include/sphactor_library.h
     include/libsphactor.h
     include/sphactor.h
-    src/sphactor_node.h
+    include/sphactor_node.h
 )
 
 source_group ("Header Files" FILES ${sphactor_headers})
@@ -215,7 +215,7 @@ if (SPHACTOR_BUILD_SHARED)
     IF (MSVC)
       add_library(sphactor SHARED ${sphactor_sources})
     ELSE (MSVC)
-     add_library(sphactor SHARED $<TARGET_OBJECTS:sphactor_objects>)
+      add_library(sphactor SHARED $<TARGET_OBJECTS:sphactor_objects>)
     ENDIF (MSVC)
   ENDIF(APPLE)
 
@@ -249,11 +249,15 @@ endif()
 
 # static
 if (SPHACTOR_BUILD_STATIC)
-  #IF (MSVC)
+  IF (APPLE)
     add_library(sphactor-static STATIC ${sphactor_sources})
-  #ELSE (MSVC)
-  #  add_library(sphactor-static STATIC $<TARGET_OBJECTS:sphactor_objects>)
-  #ENDIF (MSVC)
+  ELSE (APPLE)
+    IF (MSVC)
+      add_library(sphactor-static STATIC ${sphactor_sources})
+    ELSE (MSVC)
+      add_library(sphactor-static STATIC $<TARGET_OBJECTS:sphactor_objects>)
+    ENDIF (MSVC)
+  ENDIF (APPLE)
 
   set_target_properties(sphactor-static PROPERTIES
     PUBLIC_HEADER "${public_headers}"
@@ -341,29 +345,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sphactorConfig.cmake
 # executables
 ########################################################################
 add_executable(
-    hello
-    "${SOURCE_DIR}/src/hello.c"
-)
-if (TARGET sphactor)
-target_link_libraries(
-    hello
-    sphactor
-    ${LIBZMQ_LIBRARIES}
-    ${CZMQ_LIBRARIES}
-    ${OPTIONAL_LIBRARIES}
-)
-endif()
-if (NOT TARGET sphactor AND TARGET sphactor-static)
-target_link_libraries(
-    hello
-    sphactor-static
-    ${LIBZMQ_LIBRARIES}
-    ${CZMQ_LIBRARIES}
-    ${OPTIONAL_LIBRARIES}
-    ${OPTIONAL_LIBRARIES_STATIC}
-)
-endif()
-add_executable(
     sphactor_selftest
     "${SOURCE_DIR}/src/sphactor_selftest.c"
 )
@@ -402,6 +383,7 @@ endif()
 
 set(TEST_CLASSES
     sphactor
+    sphactor_node
 )
 
 IF (ENABLE_DRAFTS)
@@ -460,7 +442,6 @@ set(cmake_generated ${CMAKE_BINARY_DIR}/CMakeCache.txt
                     ${CMAKE_BINARY_DIR}/src/libsphactor.pc
                     ${CMAKE_BINARY_DIR}/src/libsphactor.so
                     ${CMAKE_BINARY_DIR}/src/libsphactor_selftest
-                    ${CMAKE_BINARY_DIR}/src/hello
                     ${CMAKE_BINARY_DIR}/src/sphactor_selftest
 )
 

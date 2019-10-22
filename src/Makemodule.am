@@ -42,13 +42,6 @@ endif
 
 src_libsphactor_la_LIBADD = ${project_libs}
 
-if ENABLE_HELLO
-noinst_PROGRAMS += src/hello
-src_hello_CPPFLAGS = ${AM_CPPFLAGS}
-src_hello_LDADD = ${program_libs}
-src_hello_SOURCES = src/hello.c
-endif #ENABLE_HELLO
-
 if ENABLE_SPHACTOR_SELFTEST
 check_PROGRAMS += src/sphactor_selftest
 noinst_PROGRAMS += src/sphactor_selftest
@@ -60,11 +53,11 @@ endif #ENABLE_SPHACTOR_SELFTEST
 # Install api files into /usr/local/share/zproject
 apidir = @datadir@/zproject/libsphactor
 dist_api_DATA = \
-    api/sphactor.api
+    api/sphactor.api \
+    api/sphactor_node.api
 
 # define custom target for all products of /src
 src: \
-		src/hello \
 		src/sphactor_selftest \
 		src/libsphactor.la
 

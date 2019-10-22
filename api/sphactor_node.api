@@ -24,6 +24,8 @@
     <method name = "connect">
         Connect this sphactor_node to another. Returns 0 on success -1 
         on failure
+
+        Note: sphactor_node methods can only be called from within its instance!
         <argument name="dest" type="string" />
         <return type = "integer" />
     </method>
@@ -31,9 +33,25 @@
     <method name = "disconnect">
         Disconnect this sphactor_node to another. Returns 0 on success -1 
         on failure
+
+        Note: sphactor_node methods can only be called from within its instance!
         <argument name="dest" type="string" />
         <return type = "integer" />
     </method>
+
+    <method name = "uuid">
+        Return our sphactor_node's UUID string
+
+        Note: sphactor_node methods can only be called from within its instance!
+        <return type = "zuuid" />
+    </method>
+
+    <method name = "name">
+        Return our sphactor_node's name. First 6 characters of the UUID by default.
+
+        Note: sphactor_node methods can only be called from within its instance!
+        <return type = "string" />
+    </method>                            
 
 </class>
     

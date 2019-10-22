@@ -42,13 +42,29 @@ SPHACTOR_EXPORT int
 
 //  Connect this sphactor_node to another. Returns 0 on success -1
 //  on failure
+//
+//  Note: sphactor_node methods can only be called from within its instance!
 SPHACTOR_EXPORT int
     sphactor_node_connect (sphactor_node_t *self, const char *dest);
 
 //  Disconnect this sphactor_node to another. Returns 0 on success -1
 //  on failure
+//
+//  Note: sphactor_node methods can only be called from within its instance!
 SPHACTOR_EXPORT int
     sphactor_node_disconnect (sphactor_node_t *self, const char *dest);
+
+//  Return our sphactor_node's UUID string
+//
+//  Note: sphactor_node methods can only be called from within its instance!
+SPHACTOR_EXPORT zuuid_t *
+    sphactor_node_uuid (sphactor_node_t *self);
+
+//  Return our sphactor_node's name. First 6 characters of the UUID by default.
+//
+//  Note: sphactor_node methods can only be called from within its instance!
+SPHACTOR_EXPORT const char *
+    sphactor_node_name (sphactor_node_t *self);
 
 //  Self test of this class.
 SPHACTOR_EXPORT void
