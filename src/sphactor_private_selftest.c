@@ -30,9 +30,6 @@
 void
 sphactor_private_selftest (bool verbose, const char *subtest)
 {
-// Tests for stable private classes:
-    if (streq (subtest, "$ALL") || streq (subtest, "sphactor_node_test"))
-        sphactor_node_test (verbose);
 }
 /*
 ################################################################################

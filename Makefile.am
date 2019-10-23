@@ -41,7 +41,7 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
-    src/sphactor_node.h \
+    bindings \
     src/sphactor_classes.h
 
 # NOTE: this "include" syntax is not a "make" but an "autotools" keyword,

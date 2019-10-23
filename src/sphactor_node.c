@@ -14,7 +14,26 @@
 
 /*
 @header
-    sphactor_node -
+    The sphactor_node class is build upon zactor. It acts as the running
+    instance in the thread. It uses the zactor pipe to communicate with
+    whoever initiated the sphactor instance. It's important to understand
+    that the sphactor_node can only be manage safely through the pipe.
+
+    Once a sphactor_node is created it will have the following lifecycle:
+    - INIT: the sphactor_node is initiated
+    - START: the sphactor_node is starting
+    - SOCK: an event is received on a socket
+    - TIME: a timed event is triggered
+    - STOP: the sphactor_node is going to be stopped
+    - DESTROY: the sphactor_node is going to be destroyed
+
+    During its lifetime the sphactor_node can be controlled from outside
+    its thread through its corresponding sphactor class instance. This
+    is handled through an internal API. (see sphactor_node_recv_api)
+
+    Upon construction a event handler needs to be assigned to receive the
+    sphactor_node events. Events received are instances of the type 
+    sphactor_event_t and contain all details to process the event.
 @discuss
 @end
 */
@@ -51,7 +70,7 @@ sphactor_node_require_transport(sphactor_node_t *self, const char *dest);
 //  --------------------------------------------------------------------------
 //  Create a new sphactor_node instance
 
-static sphactor_node_t *
+sphactor_node_t *
 sphactor_node_new (zsock_t *pipe, void *args)
 {
     sphactor_node_t *self = (sphactor_node_t *) zmalloc (sizeof (sphactor_node_t));
@@ -112,7 +131,7 @@ sphactor_node_new (zsock_t *pipe, void *args)
 //  --------------------------------------------------------------------------
 //  Destroy the sphactor_node instance
 
-static void
+void
 sphactor_node_destroy (sphactor_node_t **self_p)
 {
     assert (self_p);
@@ -146,7 +165,7 @@ sphactor_node_destroy (sphactor_node_t **self_p)
 //  Start this actor. Return a value greater or equal to zero if initialization
 //  was successful. Otherwise -1.
 
-static int
+int
 sphactor_node_start (sphactor_node_t *self)
 {
     assert (self);
@@ -159,7 +178,7 @@ sphactor_node_start (sphactor_node_t *self)
 //  Stop this actor. Return a value greater or equal to zero if stopping
 //  was successful. Otherwise -1.
 
-static int
+int
 sphactor_node_stop (sphactor_node_t *self)
 {
     assert (self);
@@ -172,7 +191,7 @@ sphactor_node_stop (sphactor_node_t *self)
 //  Connect this sphactor_node to another
 //  Returns 0 on success -1 on failure
 
-static int
+int
 sphactor_node_connect (sphactor_node_t *self, const char *dest)
 {
     assert ( self);
@@ -187,8 +206,8 @@ sphactor_node_connect (sphactor_node_t *self, const char *dest)
 //  Disconnect this sphactor_node from another. Destination is an endpoint string
 //  Returns 0 on success -1 on failure
 
-static int
-sphactor_node_disconnect (sphactor_node_t *self, char *dest)
+int
+sphactor_node_disconnect (sphactor_node_t *self, const char *dest)
 {
     assert (self);
     //  request sub socket to disconnect, this will create the socket if it doesn't exist
@@ -428,6 +447,15 @@ sphactor_node_actor (zsock_t *pipe, void *args)
 
     //  Signal actor successfully initiated
     zsock_signal (self->pipe, 0);
+    //  Signal handler we're initiated
+    sphactor_event_t ev = { NULL, "INIT", self->name, zuuid_str(self->uuid), self };
+    if ( self->handler)
+    {
+        zmsg_t *initretmsg = self->handler(&ev, self->handler_args);
+        if (initretmsg) zmsg_destroy(&initretmsg);
+    }
+
+    // TODO: this should run on start!
     int64_t time_till_next = self->timeout;
     int64_t time_next = zclock_mono() + self->timeout;
     if ( self->timeout == -1)
@@ -463,7 +491,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 break; //  interrupted
             }
             // TODO: think this through
-            sphactor_event_t ev = { msg, "SOC", self->name, zuuid_str(self->uuid) };
+            sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
             zmsg_t *retmsg = self->handler(&ev, self->handler_args);
             if (retmsg)
             {
@@ -478,7 +506,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             }
         }
         else if ( which == NULL ) {
-            sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
+            sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
             zmsg_t *retmsg = self->handler(&ev, self->handler_args);
             if (retmsg)
             {
@@ -514,6 +542,17 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 }
             }
         }
+    }
+    // signal our handler we're destroying
+    if ( self->handler)
+    {
+        ev.msg = NULL;
+        ev.name = "DESTROY";
+        ev.name = self->name;
+        ev.uuid = zuuid_str(self->uuid);
+        ev.node = self;
+        zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
+        if (destrretmsg) zmsg_destroy(&destrretmsg);
     }
     sphactor_node_destroy (&self);
 }

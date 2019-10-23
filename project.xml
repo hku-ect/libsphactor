@@ -13,8 +13,7 @@
     <use project = "czmq" />
 
     <class name = "sphactor" />
-    <actor name = "sphactor_node" private = "1" />
-    <main name = "hello" private = "1" />
+    <class name = "sphactor_node" />
     <target name = "travis" />
     <target name = "vs2015" />
 </project>

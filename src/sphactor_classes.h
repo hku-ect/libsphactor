@@ -26,24 +26,14 @@
 #include "../include/libsphactor.h"
 
 //  Opaque class structures to allow forward references
-#ifndef SPHACTOR_NODE_T_DEFINED
-typedef struct _sphactor_node_t sphactor_node_t;
-#define SPHACTOR_NODE_T_DEFINED
-#endif
 
 //  Extra headers
 
 //  Internal API
 
-#include "sphactor_node.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef SPHACTOR_BUILD_DRAFT_API
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-SPHACTOR_PRIVATE void
-    sphactor_node_test (bool verbose);
 
 //  Self test for private classes
 SPHACTOR_PRIVATE void
