@@ -66,6 +66,12 @@ SPHACTOR_EXPORT zuuid_t *
 SPHACTOR_EXPORT const char *
     sphactor_node_name (sphactor_node_t *self);
 
+//  Set the timeout for the polling of the sphactor_node.
+//
+//  Note: sphactor_node methods can only be called from within its instance!
+SPHACTOR_EXPORT void
+    sphactor_node_set_timeout (sphactor_node_t *self, int64_t timeout);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_node_test (bool verbose);

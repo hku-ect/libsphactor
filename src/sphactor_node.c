@@ -57,6 +57,7 @@ struct _sphactor_node_t {
     zhash_t     *subs;            //  a list of our subscription sockets
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
     int64_t     timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
+    int64_t     time_next;        //  timestamp for our next iteration
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
@@ -218,6 +219,14 @@ sphactor_node_disconnect (sphactor_node_t *self, const char *dest)
     return 0;
 }
 
+void
+sphactor_node_set_timeout (sphactor_node_t *self, int64_t timeout)
+{
+    self->timeout = timeout;
+    if (self->timeout >= 0 ) self->time_next = zclock_mono() + self->timeout;
+    else self->time_next = INT_MAX;
+}
+
 //  Here we handle incoming message from the node
 
 static void
@@ -320,7 +329,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     {
         char *rate =  zmsg_popstr(request);
         //  rate is per second, timeout is in ms
-        self->timeout = (int64_t) atol(rate);
+        sphactor_node_set_timeout( self, (int64_t) atol(rate) );
         zstr_free(&rate);
     }
     else
@@ -429,6 +438,35 @@ sph_actor_rate_test(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
+static zmsg_t *
+sph_actor_lifecycle(sphactor_event_t *ev, void *args)
+{
+    static int i = 0;
+    zsys_info("Lifecycle: %i, %s", i, ev->type);
+    switch ( i )
+    {
+    case 0 :
+        assert( ev->type == "INIT" );
+        sphactor_node_set_timeout( (sphactor_node_t *)ev->node, 16);
+        break;
+    case 1 :
+        assert( ev->type == "TIME" );
+        // reset the timeout
+        assert( ev->node->timeout == 16 );
+        sphactor_node_set_timeout( (sphactor_node_t *)ev->node, -1);
+        break;
+    case 2 :
+        assert( ev->type == "DESTROY" );
+        break;
+    default:
+        assert( false );
+        break;
+    }
+    i++;
+    assert( ev->msg == NULL );
+    return NULL;
+}
+
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
 
@@ -457,31 +495,29 @@ sphactor_node_actor (zsock_t *pipe, void *args)
 
     // TODO: this should run on start!
     int64_t time_till_next = self->timeout;
-    int64_t time_next = zclock_mono() + self->timeout;
+    self->time_next = zclock_mono() + self->timeout;
     if ( self->timeout == -1)
     {
         time_till_next = -1;
-        time_next = INT_MAX;
+        self->time_next = INT_MAX;
     }
 
     while (!self->terminated) {
         //  determine poller timeout
-        if ( zclock_mono() > time_next )
+        if ( zclock_mono() > self->time_next )
         {
             zsys_error("Sphactor_node: %s, is falling behind! Consider decreasing it's rate if this happens often", self->name);
             time_till_next = 0;
         }
         else
         {
-            time_till_next = time_next - zclock_mono();
+            time_till_next = self->time_next - zclock_mono();
         }
         zsock_t *which = (zsock_t *) zpoller_wait (self->poller, (int)time_till_next );
-        if (self->timeout > 0 ) time_next = zclock_mono() + self->timeout;
+        if (self->timeout > 0 ) self->time_next = zclock_mono() + self->timeout;
         if (which == self->pipe)
         {
             sphactor_node_recv_api (self);
-            //  api can change the timeout!
-            if (self->timeout > 0 ) time_next = zclock_mono() + self->timeout;
         }
         //  if a sub socket then process actor
         else if ( which == self->sub ) {
@@ -506,6 +542,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             }
         }
         else if ( which == NULL ) {
+            //  timed events don't carry a message instead NULL is passed
             sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
             zmsg_t *retmsg = self->handler(&ev, self->handler_args);
             if (retmsg)
@@ -519,18 +556,8 @@ sphactor_node_actor (zsock_t *pipe, void *args)
                 }
             }
         }
-        else if ( which == NULL )
-        {
-            //  timed events don't carry a message instead NULL is passed
-            sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
-            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-            if (retmsg)
-            {
-                // publish the msg
-                zmsg_send(&retmsg, self->pub);
-            }
-        }
         else {
+            // TODO remove this, do we need it?
             zsock_t *sub = zhash_first( self->subs );
             while ( sub )
             {
@@ -547,7 +574,7 @@ sphactor_node_actor (zsock_t *pipe, void *args)
     if ( self->handler)
     {
         ev.msg = NULL;
-        ev.name = "DESTROY";
+        ev.type = "DESTROY";
         ev.name = self->name;
         ev.uuid = zuuid_str(self->uuid);
         ev.node = self;
@@ -680,6 +707,14 @@ sphactor_node_test (bool verbose)
     zstr_free(&ret);
     zclock_sleep(1000/60);
     zactor_destroy (&sphactor_rate_tester);
+
+    // lifecycle test
+    sphactor_shim_t lifecycle_tester = { &sph_actor_lifecycle, NULL, NULL, NULL };
+    zactor_t *sphactor_lifecycle_tester = zactor_new (sphactor_node_actor, &lifecycle_tester);
+    assert(sphactor_lifecycle_tester);
+    zclock_sleep(20);
+    zactor_destroy( &sphactor_lifecycle_tester );
+
     //  @end
 
     printf ("OK\n");
