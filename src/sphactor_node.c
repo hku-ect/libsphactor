@@ -139,6 +139,16 @@ sphactor_node_destroy (sphactor_node_t **self_p)
     if (*self_p) {
         sphactor_node_t *self = *self_p;
 
+        // signal upstream we are destroying
+        sphactor_event_t ev = { NULL, "DESTROY", self->name, zuuid_str(self->uuid), self };
+        if ( self->handler )
+        {
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
+            {
+                zmsg_destroy( &retmsg );
+            }
+        }
         zpoller_destroy (&self->poller);
         zuuid_destroy(&self->uuid);
         zstr_free(&self->name);
@@ -456,6 +466,9 @@ sph_actor_lifecycle(sphactor_event_t *ev, void *args)
         sphactor_node_set_timeout( (sphactor_node_t *)ev->node, -1);
         break;
     case 2 :
+        assert( ev->type == "STOP" );
+        break;
+    case 3 :
         assert( ev->type == "DESTROY" );
         break;
     default:
@@ -570,11 +583,11 @@ sphactor_node_actor (zsock_t *pipe, void *args)
             }
         }
     }
-    // signal our handler we're destroying
+    // signal our handler we're stopping
     if ( self->handler)
     {
         ev.msg = NULL;
-        ev.type = "DESTROY";
+        ev.type = "STOP";
         ev.name = self->name;
         ev.uuid = zuuid_str(self->uuid);
         ev.node = self;
