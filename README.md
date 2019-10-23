@@ -48,7 +48,7 @@ Once the above dependencies are installed, you are ready to build libsphactor. T
 
  * Clone the repo
 ```
-git clone http://github.com/aaronvark/libsphactor.git
+git clone http://github.com/sphaero/libsphactor.git
 ```
  * Build the project
 ```
