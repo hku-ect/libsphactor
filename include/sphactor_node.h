@@ -24,6 +24,10 @@ extern "C" {
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
+// Callback function for custom file descriptor handling
+typedef zmsg_t * (sphactor_node_handler_fn) (
+    void *fd);
+
 //  Constructor, creates a new Sphactor_node instance.
 SPHACTOR_EXPORT sphactor_node_t *
     sphactor_node_new (zsock_t *pipe, void *arg);
@@ -76,7 +80,7 @@ SPHACTOR_EXPORT void
 //
 //  Note: sphactor_node methods can only be called from within its instance!
 SPHACTOR_EXPORT int
-    sphactor_node_poller_add (sphactor_node_t *self, void *fd);
+    sphactor_node_poller_add (sphactor_node_t *self, void *fd, sphactor_node_handler_fn handler);
 
 //  Removes a file descriptor from our poller (wraps zpoller_remove).
 //

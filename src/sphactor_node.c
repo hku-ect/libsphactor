@@ -61,6 +61,7 @@ struct _sphactor_node_t {
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
+    zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
 };
 
 
@@ -125,6 +126,8 @@ sphactor_node_new (zsock_t *pipe, void *args)
     self->poller = zpoller_new (self->pipe, NULL);
     rc = zpoller_add(self->poller, self->sub);
     assert ( rc == 0 );
+    
+    self->fd_handlers = zhashx_new();
 
     return self;
 }
@@ -165,6 +168,8 @@ sphactor_node_destroy (sphactor_node_t **self_p)
             itr = zhash_next( self->subs );
         }
         zhash_destroy(&self->subs);
+        
+        zhashx_destroy(&self->fd_handlers);
 
         //  Free object itself
         free (self);
@@ -238,10 +243,11 @@ sphactor_node_set_timeout (sphactor_node_t *self, int64_t timeout)
 }
 
 int
-sphactor_node_poller_add (sphactor_node_t *self, void * fd)
+sphactor_node_poller_add (sphactor_node_t *self, void * fd, sphactor_node_handler_fn * handler)
 {
     assert(self);
     int rc = zpoller_add(self->poller, fd);
+    zhashx_insert(self->fd_handlers, fd, (void*)handler);
     assert (rc == 0);
     return rc;
 }
@@ -251,6 +257,7 @@ sphactor_node_poller_remove (sphactor_node_t *self, void * fd)
 {
     assert(self);
     int rc = zpoller_remove(self->poller, fd);
+    zhashx_delete(self->fd_handlers, fd);
     assert (rc == 0);
     return rc;
 }
@@ -545,8 +552,29 @@ sphactor_node_actor (zsock_t *pipe, void *args)
         {
             time_till_next = self->time_next - zclock_mono();
         }
-        zsock_t *which = (zsock_t *) zpoller_wait (self->poller, (int)time_till_next );
+        
+        void *which = (void *) zpoller_wait (self->poller, (int)time_till_next );
+        
         if (self->timeout > 0 ) self->time_next = zclock_mono() + self->timeout;
+        
+        if ( which != NULL && !zsock_is(which) ) {
+            int * fd = (int*)which;
+            sphactor_node_handler_fn * func = zhashx_lookup(self->fd_handlers, fd);
+            
+            if ( func ) {
+                zmsg_t * retmsg = func( (void * )fd );
+                if ( retmsg != NULL ) {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
+                    
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL ) {
+                        zmsg_destroy(&retmsg);
+                    }
+                }
+            }
+        }
+        else
         if (which == self->pipe)
         {
             sphactor_node_recv_api (self);
@@ -746,6 +774,10 @@ sphactor_node_test (bool verbose)
     assert(sphactor_lifecycle_tester);
     zclock_sleep(20);
     zactor_destroy( &sphactor_lifecycle_tester );
+    
+    
+    // zpoller add / remove test
+    
 
     //  @end
 

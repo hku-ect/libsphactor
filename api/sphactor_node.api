@@ -1,11 +1,16 @@
 <class name = "sphactor_node" state = "stable">
 
+    <callback_type name = "handler_fn">
+        Callback function for custom file descriptor handling
+        <argument name = "fd" type = "anything" />
+        <return type = "zmsg" />
+    </callback_type>
+
     <constructor>
         Constructor, creates a new Sphactor_node instance. 
         <argument name = "pipe" type = "zsock"  />
         <argument name = "arg" type = "anything" optional = "1" />
     </constructor>
-
 
     <destructor>
         Destructor, destroys a Sphactor_node. 
@@ -65,6 +70,7 @@
 
         Note: sphactor_node methods can only be called from within its instance!
         <argument name = "fd" type = "anything" />
+        <argument name = "handler" type = "sphactor_node_handler_fn" callback = "1"/>
         <return type = "integer" />
     </method>
 
