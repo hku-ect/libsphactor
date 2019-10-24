@@ -556,27 +556,25 @@ sphactor_node_actor (zsock_t *pipe, void *args)
         void *which = (void *) zpoller_wait (self->poller, (int)time_till_next );
         
         if (self->timeout > 0 ) self->time_next = zclock_mono() + self->timeout;
-        if ( which != NULL ) {
-            if (!zsock_is(which)) {
-                int * fd = (int*)which;
-                zsys_info("FD: %i", fd);
-                //TODO: Add handler
-                sphactor_node_handler_fn * func = zhashx_lookup(self->fd_handlers, fd);
-                if ( func ) {
-                    zmsg_t * retmsg = func( (void * )fd );
+        
+        if ( which != NULL && !zsock_is(which) ) {
+            int * fd = (int*)which;
+            sphactor_node_handler_fn * func = zhashx_lookup(self->fd_handlers, fd);
+            
+            if ( func ) {
+                zmsg_t * retmsg = func( (void * )fd );
+                if ( retmsg != NULL ) {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
                     
-                    if ( retmsg != NULL ) {
-                        // publish the msg
-                        zmsg_send(&retmsg, self->pub);
-                        
-                        // delete message if we have no connections (otherwise it leaks)
-                        if ( zsock_endpoint(self->pub) == NULL ) {
-                            zmsg_destroy(&retmsg);
-                        }
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL ) {
+                        zmsg_destroy(&retmsg);
                     }
                 }
             }
         }
+        else
         if (which == self->pipe)
         {
             sphactor_node_recv_api (self);
