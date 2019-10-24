@@ -72,6 +72,18 @@ SPHACTOR_EXPORT const char *
 SPHACTOR_EXPORT void
     sphactor_node_set_timeout (sphactor_node_t *self, int64_t timeout);
 
+//  Adds a file descriptor to our poller (wraps zpoller_add).
+//
+//  Note: sphactor_node methods can only be called from within its instance!
+SPHACTOR_EXPORT int
+    sphactor_node_poller_add (sphactor_node_t *self, void *fd);
+
+//  Removes a file descriptor from our poller (wraps zpoller_remove).
+//
+//  Note: sphactor_node methods can only be called from within its instance!
+SPHACTOR_EXPORT int
+    sphactor_node_poller_remove (sphactor_node_t *self, void *fd);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_node_test (bool verbose);

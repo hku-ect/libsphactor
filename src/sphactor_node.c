@@ -227,6 +227,25 @@ sphactor_node_set_timeout (sphactor_node_t *self, int64_t timeout)
     else self->time_next = INT_MAX;
 }
 
+int
+sphactor_node_poller_add (sphactor_node_t *self, void * fd)
+{
+    assert(self);
+    int rc = zpoller_add(self->poller, fd);
+    assert (rc == 0);
+    return rc;
+}
+
+int
+sphactor_node_poller_remove (sphactor_node_t *self, void * fd)
+{
+    assert(self);
+    int rc = zpoller_remove(self->poller, fd);
+    assert (rc == 0);
+    return rc;
+}
+
+
 //  Here we handle incoming message from the node
 
 static void

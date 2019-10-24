@@ -59,4 +59,20 @@
         Note: sphactor_node methods can only be called from within its instance!
         <argument name = "timeout" type = "msecs" />
     </method>
+
+    <method name = "poller add">
+        Adds a file descriptor to our poller (wraps zpoller_add).
+
+        Note: sphactor_node methods can only be called from within its instance!
+        <argument name = "fd" type = "anything" />
+        <return type = "integer" />
+    </method>
+
+    <method name = "poller remove">
+        Removes a file descriptor from our poller (wraps zpoller_remove).
+
+        Note: sphactor_node methods can only be called from within its instance!
+        <argument name = "fd" type = "anything" />
+        <return type = "integer" />
+    </method>
 </class>
