@@ -38,6 +38,7 @@ struct _sphactor_t {
 
 //  Hash table for the actor_type register of actors
 static zhash_t *actors_reg = NULL;
+static zlist_t *actors_keys = NULL;
 
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
@@ -299,7 +300,13 @@ zlist_t *
 sphactor_get_registered ()
 {
     if ( actors_reg == NULL ) actors_reg = zhash_new();
-    return zhash_keys(actors_reg);
+    
+    if ( actors_keys != NULL ) {
+        zlist_destroy(&actors_keys);
+    }
+    
+    actors_keys = zhash_keys(actors_reg);
+    return actors_keys;
 }
 
 //  --------------------------------------------------------------------------
