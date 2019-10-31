@@ -309,6 +309,17 @@ sphactor_get_registered ()
     return actors_keys;
 }
 
+//
+//  Disposes of all statically allocated resources
+//   Call this before shutting down, because otherwise these resources will be re-allocated as needed.
+void
+sphactor_dispose ()
+{
+    zlist_destroy(&actors_keys);
+    zhash_destroy(&actors_reg);
+}
+
+
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
