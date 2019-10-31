@@ -22,6 +22,10 @@
         <return type = "zlist"/>
     </method>
 
+    <method name = "dispose" singleton = "1">
+        <return type = "nothing"/>
+    </method>
+
     <constructor>
         Constructor, creates a new Sphactor node. 
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1" />
