@@ -328,7 +328,7 @@ sphactor_node_recv_api (sphactor_node_t *self)
     else
     if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
     {
-        sphactor_event_t ev = { NULL, "SOC", self->name, zuuid_str(self->uuid) };
+        sphactor_event_t ev = { NULL, "SOCK", self->name, zuuid_str(self->uuid) };
         zmsg_t *retmsg = self->handler( &ev, self->handler_args);
         if (retmsg)
         {
