@@ -21,9 +21,63 @@ Building them should be pretty straight forward:
 
  * Get dependencies via brew:
 ```
-brew install libtool autoconf automake pkg-config cmake make zeromq
+brew install libtool autoconf automake pkg-config cmake make zeromq czmq
 ```
- * Clone & build libzmq & czmq
+
+### Building Libsphactor
+
+Once the above dependencies are installed, you are ready to build libsphactor. The process for this is much the same:
+
+ * Clone the repo
+```
+git clone http://github.com/hku-ect/libsphactor.git
+```
+ * Build the project
+```
+cd libsphactor
+./autogen.sh
+./configure
+make
+# optionally test the library
+SPHACTOR_SOCKET_LIMIT=30 make check
+sudo make install
+```
+See the minimal example below. Should work on OSX as well.
+
+### Creating an XCode project
+
+* Create a new macOS - Command Line Tool project
+* Enter a product name and other details, select C as the language
+* Select a folder
+* You'll be provided with an example C file. Paste the minimal example source from below to replace the provided C example
+* Select the project on the left pane. Goto Build Settings and select All + Combined
+* Look for "Search paths"
+  * Add /usr/local/include to "Header Search Paths"  
+  * Add /usr/local/lib to "Library Search Paths"  
+* Look for "Linking"
+  * Add "-lsphactor" and "-lczmq" to "Other Linker Flags"
+
+You can now run the program.
+
+If you want to work on the library it self it is best to use Cmake to build a Xcode project. from the repository's root run:
+
+```
+mkdir xcodeproj
+cd xcodeproj
+cmake -G Xcode ..
+```
+This should generate a valid Xcode project that can run and pass tests.
+
+### Latest dependencies
+
+Sometimes you need the latest dependencies. Here's how:
+
+First uninstall already installed libs (optional):
+```
+brew uninistall zeromq czmq
+```
+
+Clone & build libzmq & czmq
 ```
 git clone git://github.com/zeromq/libzmq.git
 cd libzmq
@@ -39,39 +93,7 @@ cd czmq
 sudo make install
 cd ..
 ```
-
 ---
-
-### Building Libsphactor
-
-Once the above dependencies are installed, you are ready to build libsphactor. The process for this is much the same:
-
- * Clone the repo
-```
-git clone http://github.com/sphaero/libsphactor.git
-```
- * Build the project
-```
-cd libsphactor
-./autogen.sh
-./configure
-make check
-sudo make install
-```
-
----
-
-### Creating an XCode project
-
-To create an xcode project, perform the following commands from the root git folder:
-
-```
-mkdir xcodeproj
-cd xcodeproj
-cmake -G Xcode ..
-```
-This should generate a valid Xcode project that can run and pass tests.
-
 
 ## Debian/Ubuntu Linux
 
