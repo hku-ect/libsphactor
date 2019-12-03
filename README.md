@@ -120,6 +120,12 @@ sudo make install
 ```
 You can now use libsphactor as a static (/usr/local/lib/libsphactor.a) or dynamic lib (/usr/local/lib/libsphactor.so). Include file are in /usr/local/include.
 
+---
+## Windows
+
+Unfortunately we have no instructions for Windows just yet. Bare with us
+
+---
 ### Minimal example app
 
 test.c:
