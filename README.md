@@ -123,7 +123,7 @@ You can now use libsphactor as a static (/usr/local/lib/libsphactor.a) or dynami
 ---
 ## Windows
 
-Unfortunately we have no instructions for Windows just yet. Bare with us
+Unfortunately we have no instructions for Windows just yet. Bare with us or help us out by sending us a Pull Request.
 
 ---
 ### Minimal example app
