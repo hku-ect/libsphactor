@@ -21,9 +21,63 @@ Building them should be pretty straight forward:
 
  * Get dependencies via brew:
 ```
-brew install libtool autoconf automake pkg-config cmake make zeromq
+brew install libtool autoconf automake pkg-config cmake make zeromq czmq
 ```
- * Clone & build libzmq & czmq
+
+### Building Libsphactor
+
+Once the above dependencies are installed, you are ready to build libsphactor. The process for this is much the same:
+
+ * Clone the repo
+```
+git clone http://github.com/hku-ect/libsphactor.git
+```
+ * Build the project
+```
+cd libsphactor
+./autogen.sh
+./configure
+make
+# optionally test the library
+SPHACTOR_SOCKET_LIMIT=30 make check
+sudo make install
+```
+See the minimal example below. Should work on OSX as well.
+
+### Creating an XCode project
+
+* Create a new macOS - Command Line Tool project
+* Enter a product name and other details, select C as the language
+* Select a folder
+* You'll be provided with an example C file. Paste the minimal example source from below to replace the provided C example
+* Select the project on the left pane. Goto Build Settings and select All + Combined
+* Look for "Search paths"
+  * Add /usr/local/include to "Header Search Paths"  
+  * Add /usr/local/lib to "Library Search Paths"  
+* Look for "Linking"
+  * Add "-lsphactor" and "-lczmq" to "Other Linker Flags"
+
+You can now run the program.
+
+If you want to work on the library it self it is best to use Cmake to build a Xcode project. from the repository's root run:
+
+```
+mkdir xcodeproj
+cd xcodeproj
+cmake -G Xcode ..
+```
+This should generate a valid Xcode project that can run and pass tests.
+
+### Latest dependencies
+
+Sometimes you need the latest dependencies. Here's how:
+
+First uninstall already installed libs (optional):
+```
+brew uninistall zeromq czmq
+```
+
+Clone & build libzmq & czmq
 ```
 git clone git://github.com/zeromq/libzmq.git
 cd libzmq
@@ -39,35 +93,135 @@ cd czmq
 sudo make install
 cd ..
 ```
-
 ---
 
-### Building Libsphactor
+## Debian/Ubuntu Linux
 
-Once the above dependencies are installed, you are ready to build libsphactor. The process for this is much the same:
+(tested on ubuntu 16.04)
 
- * Clone the repo
+Install dependencies
+
 ```
-git clone http://github.com/sphaero/libsphactor.git
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential libtool \
+    pkg-config autotools-dev autoconf automake \
+    uuid-dev libpcre3-dev libsodium-dev libzmq5-dev libczmq-dev
 ```
- * Build the project
+
+Clone this repo, build and install
+
 ```
+git clone https://github.com/hku-ect/libsphactor.git
 cd libsphactor
 ./autogen.sh
-./configure
-make check
+./configure && make
 sudo make install
 ```
+You can now use libsphactor as a static (/usr/local/lib/libsphactor.a) or dynamic lib (/usr/local/lib/libsphactor.so). Include file are in /usr/local/include.
 
 ---
+## Windows
 
-### Creating an XCode project
+Unfortunately we have no instructions for Windows just yet. Bare with us or help us out by sending us a Pull Request.
 
-To create an xcode project, perform the following commands from the root git folder:
+---
+### Minimal example app
+
+test.c:
+```c
+#include <sphactor_library.h>
+#include <czmq.h>
+
+//  An actor is a method wich receives a sphactor_event as an argument
+//  and returns a zmsg_t. Zmsg_t is just a message we can send.
+static zmsg_t *
+hello_sphactor(sphactor_event_t *ev, void *args)
+{
+    if ( ev->msg == NULL ) return NULL;
+    assert(ev->msg);
+    //  just echo what we receive
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Hello actor %s says: %s", ev->name, cmd);
+    zstr_free(&cmd);
+    // if there are strings left publish them
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
+    return NULL;
+}
+
+//  This is identical to the first hello_actor
+static zmsg_t *
+hello_sphactor2(sphactor_event_t *ev, void *args)
+{
+    if ( ev->msg == NULL ) return NULL;
+    assert(ev->msg);
+    // just echo what we receive
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Hello2 actor %s says: %s", ev->name, cmd);
+    zstr_free(&cmd);
+    // if there are strings left publish them
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
+    return NULL;
+}
+
+int main()
+{
+    //  create two actors
+    sphactor_t *hello1 = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    sphactor_t *hello2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
+
+    //  connect the two actors to each other
+    sphactor_connect(hello1, sphactor_endpoint(hello2));
+    sphactor_connect(hello2, sphactor_endpoint(hello1));
+
+    //  send multiple strings to the first actor
+    zstr_sendm( sphactor_socket(hello1), "SEND");  // this is an API command
+    zstr_sendm( sphactor_socket(hello1), "HELLO"); // first string
+    zstr_sendm( sphactor_socket(hello1), "WORLD"); // etc...
+    zstr_sendm( sphactor_socket(hello1), "AND");
+    zstr_sendm( sphactor_socket(hello1), "ALIEN");
+    zstr_send( sphactor_socket(hello1), "SPACELINGS"); // finish message construction and send the message
+
+    zclock_sleep(10); //  give some time for the test to complete, since it's threaded
+
+    sphactor_destroy (&hello1);
+    sphactor_destroy (&hello2);
+
+    return 0;
+}
 
 ```
-mkdir xcodeproj
-cd xcodeproj
-cmake -G Xcode ..
+Build this file and run:
+
 ```
-This should generate a valid Xcode project that can run and pass tests.
+gcc -o test main.c -lczmq -lsphactor
+./test
+```
+
+If correct it wil show:
+```
+I: 19-12-03 13:20:49 Hello2 actor A8D382 says: HELLO
+I: 19-12-03 13:20:49 Hello actor C3FA9D says: WORLD
+I: 19-12-03 13:20:49 Hello2 actor A8D382 says: AND
+I: 19-12-03 13:20:49 Hello actor C3FA9D says: ALIEN
+I: 19-12-03 13:20:49 Hello2 actor A8D382 says: SPACELINGS
+```
+
+You can also use the static lib instead of the dynamic one:
+```
+gcc -o test main.c /usr/local/lib/libsphactor.a /usr/lib/x86_64-linux-gnu/libczmq.a -l zmq -lpthread
+```
