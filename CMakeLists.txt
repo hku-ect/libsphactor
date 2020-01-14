@@ -155,8 +155,8 @@ ENDIF (CZMQ_FOUND)
 # version
 ########################################################################
 set(SPHACTOR_VERSION_MAJOR 0)
-set(SPHACTOR_VERSION_MINOR 0)
-set(SPHACTOR_VERSION_PATCH 1)
+set(SPHACTOR_VERSION_MINOR 1)
+set(SPHACTOR_VERSION_PATCH 0)
 set(SPHACTOR_VERSION "${SPHACTOR_VERSION_MAJOR}.${SPHACTOR_VERSION_MINOR}.${SPHACTOR_VERSION_PATCH}")
 message(STATUS "Detected SPHACTOR Version - ${SPHACTOR_VERSION}")
 
@@ -168,7 +168,7 @@ set (sphactor_headers
     include/sphactor_library.h
     include/libsphactor.h
     include/sphactor.h
-    include/sphactor_node.h
+    include/sphactor_actor.h
 )
 
 source_group ("Header Files" FILES ${sphactor_headers})
@@ -182,7 +182,7 @@ install(FILES ${sphactor_headers} DESTINATION include)
 include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include" "${PROJECT_BINARY_DIR}")
 set (sphactor_sources
     src/sphactor.c
-    src/sphactor_node.c
+    src/sphactor_actor.c
 )
 IF (ENABLE_DRAFTS)
     list (APPEND sphactor_sources
@@ -293,7 +293,7 @@ endif()
 ########################################################################
 # pkgconfig
 ########################################################################
-set (VERSION "0.0.1")
+set (VERSION "0.1.0")
 set (prefix "${CMAKE_INSTALL_PREFIX}")
 set (exec_prefix "\${prefix}")
 set (libdir "\${prefix}/lib${LIB_SUFFIX}")
@@ -383,7 +383,7 @@ endif()
 
 set(TEST_CLASSES
     sphactor
-    sphactor_node
+    sphactor_actor
 )
 
 IF (ENABLE_DRAFTS)
