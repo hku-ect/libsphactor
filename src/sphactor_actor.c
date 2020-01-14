@@ -429,13 +429,13 @@ sph_actor_lifecycle(sphactor_event_t *ev, void *args)
     {
     case 0 :
         assert( ev->type == "INIT" );
-        sphactor_actor_set_timeout( (sphactor_actor_t *)ev->node, 16);
+        sphactor_actor_set_timeout( (sphactor_actor_t *)ev->actor, 16);
         break;
     case 1 :
         assert( ev->type == "TIME" );
         // reset the timeout
-        assert( ev->node->timeout == 16 );
-        sphactor_actor_set_timeout( (sphactor_actor_t *)ev->node, -1);
+        assert( ev->actor->timeout == 16 );
+        sphactor_actor_set_timeout( (sphactor_actor_t *)ev->actor, -1);
         break;
     case 2 :
         assert( ev->type == "STOP" );
@@ -583,7 +583,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
         ev.type = "STOP";
         ev.name = self->name;
         ev.uuid = zuuid_str(self->uuid);
-        ev.node = self;
+        ev.actor = self;
         zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
         if (destrretmsg) zmsg_destroy(&destrretmsg);
     }
