@@ -131,7 +131,7 @@ sphactor_ask_name (sphactor_t *self)
 }
 
 const char *
-sphactor_actor_type (sphactor_t *self)
+sphactor_ask_actor_type (sphactor_t *self)
 {
     assert(self);
     zstr_send(self->actor, "TYPE");
@@ -160,7 +160,7 @@ sphactor_ask_set_name (sphactor_t *self, const char *name)
 }
 
 void
-sphactor_set_actor_type (sphactor_t *self, const char *actor_type)
+sphactor_ask_set_actor_type (sphactor_t *self, const char *actor_type)
 {
     assert (self);
     assert (actor_type);
@@ -252,7 +252,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     sphactor_ask_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    char* type = (char*)sphactor_actor_type(self);
+    char* type = (char*)sphactor_ask_actor_type(self);
     zconfig_set_value(ztype, "%s", type);
     zconfig_set_value(zname, "%s", self->name);
     zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self));
@@ -553,8 +553,8 @@ sphactor_test (bool verbose)
     // create two actors
     sphactor_t *actor1 = sphactor_new(NULL, NULL, "Actor 1", NULL);
     sphactor_t *actor2 = sphactor_new(NULL, NULL, "Actor 2", NULL);
-    sphactor_set_actor_type(actor1, "Type1");
-    sphactor_set_actor_type(actor2, "Type2");
+    sphactor_ask_set_actor_type(actor1, "Type1");
+    sphactor_ask_set_actor_type(actor2, "Type2");
     
     // save to zconfig file
     const char* fileName = "testsave.txt";
