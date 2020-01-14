@@ -1,10 +1,9 @@
 /*  =========================================================================
-    sphactor - class description
 
     Copyright (c) the Contributors as noted in the AUTHORS file.
 
-    This file is part of Zyre, an open-source framework for proximity-based
-    peer-to-peer applications -- See http://zyre.org.
+    This file is part of Sphactor, an open-source framework for high level
+    actor model concurrency --- http://sphactor.org
 
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -43,7 +42,8 @@ static zlist_t *actors_keys = NULL;
 //  --------------------------------------------------------------------------
 //  Create a new sphactor. Pass a name and uuid. If your specify NULL
 //  a uuid will be generated and the first 6 chars will be used as a name
-void sphactor_node_actor(zsock_t *pipe, void *args);
+//  (forward declare)
+void sphactor_actor_run(zsock_t *pipe, void *args);
 
 sphactor_t *
 sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t *uuid)
@@ -55,12 +55,12 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
         self->uuid = zuuid_dup(uuid);
 
     sphactor_shim_t shim = { handler, args, uuid, name };
-    self->actor = zactor_new( sphactor_node_actor, &shim);
+    self->actor = zactor_new( sphactor_actor_run, &shim);
 
     if (name)
     {
         //self->name = strdup(name);
-        sphactor_set_name( self, name );
+        sphactor_ask_set_name( self, name );
     }
 
     return self;
@@ -102,7 +102,7 @@ sphactor_destroy (sphactor_t **self_p)
 
 // caller does not own the uuid!
 zuuid_t *
-sphactor_uuid (sphactor_t *self)
+sphactor_ask_uuid (sphactor_t *self)
 {
     assert(self);
     if (self->uuid == NULL )
@@ -119,7 +119,7 @@ sphactor_uuid (sphactor_t *self)
 }
 
 const char *
-sphactor_name (sphactor_t *self)
+sphactor_ask_name (sphactor_t *self)
 {
     assert(self);
     if ( self->name == NULL )
@@ -139,7 +139,7 @@ sphactor_actor_type (sphactor_t *self)
 }
 
 const char *
-sphactor_endpoint (sphactor_t *self)
+sphactor_ask_endpoint (sphactor_t *self)
 {
     assert(self);
     if ( self->endpoint == NULL )
@@ -152,7 +152,7 @@ sphactor_endpoint (sphactor_t *self)
 
 
 void
-sphactor_set_name (sphactor_t *self, const char *name)
+sphactor_ask_set_name (sphactor_t *self, const char *name)
 {
     assert (self);
     assert (name);
@@ -168,7 +168,7 @@ sphactor_set_actor_type (sphactor_t *self, const char *actor_type)
 }
 
 int
-sphactor_connect (sphactor_t *self, const char *endpoint)
+sphactor_ask_connect (sphactor_t *self, const char *endpoint)
 {
     assert(self);
     assert(endpoint);
@@ -190,7 +190,7 @@ sphactor_connect (sphactor_t *self, const char *endpoint)
 }
 
 int
-sphactor_disconnect (sphactor_t *self, const char *endpoint)
+sphactor_ask_disconnect (sphactor_t *self, const char *endpoint)
 {
     assert(self);
     assert(endpoint);
@@ -218,7 +218,7 @@ sphactor_socket(sphactor_t *self)
 }
 
 void
-sphactor_set_verbose (sphactor_t *self, bool on)
+sphactor_ask_set_verbose (sphactor_t *self, bool on)
 {
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
@@ -250,12 +250,12 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zname = zconfig_new("name", curNode);
     zendpoint = zconfig_new("endpoint", curNode);
     
-    sphactor_uuid (self);
+    sphactor_ask_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
     char* type = (char*)sphactor_actor_type(self);
     zconfig_set_value(ztype, "%s", type);
     zconfig_set_value(zname, "%s", self->name);
-    zconfig_set_value(zendpoint, "%s", sphactor_endpoint(self));
+    zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self));
     
     zstr_free(&type);
     
@@ -421,26 +421,26 @@ sphactor_test (bool verbose)
     //  Simple create/destroy/name/uuid test
     sphactor_t *self = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (self);
-    const zuuid_t *uuidtest = sphactor_uuid(self);
+    const zuuid_t *uuidtest = sphactor_ask_uuid(self);
     assert(uuidtest);
     //  name should be the first 6 chars from the uuid
-    const char *name = sphactor_name( self );
+    const char *name = sphactor_ask_name( self );
     char *name2 = (char *) zmalloc (7);
     memcpy (name2, zuuid_str((zuuid_t *)uuidtest), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
-    //zuuid_destroy(&uuidtest); //sphactor_uuid is owner of the pointer!
+    //zuuid_destroy(&uuidtest); //sphactor_ask_uuid is owner of the pointer!
     sphactor_destroy (&self);
 
     //  Simple create/destroy/name/uuid test with specified uuid
     zuuid_t *uuid = zuuid_new();
     self = sphactor_new ( NULL, NULL, NULL, uuid);
     assert (self);
-    uuidtest = sphactor_uuid(self);
+    uuidtest = sphactor_ask_uuid(self);
     assert(uuidtest);
     assert( zuuid_eq(uuid, zuuid_data((zuuid_t*)uuidtest) ) );
     //  name should be the first 6 chars from the uuid
-    name = sphactor_name( self );
+    name = sphactor_ask_name( self );
     name2 = (char *) zmalloc (7);
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
@@ -452,22 +452,22 @@ sphactor_test (bool verbose)
     sphactor_t *sub = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (pub);
     assert (sub);
-    sphactor_set_verbose(sub, true);
+    sphactor_ask_set_verbose(sub, true);
     //  get endpoints
-    const char *pubendp = sphactor_endpoint(pub);
-    const char *subendp = sphactor_endpoint(sub);
-    zuuid_t *puuid = sphactor_uuid(pub);
-    zuuid_t *suuid = sphactor_uuid(sub);
+    const char *pubendp = sphactor_ask_endpoint(pub);
+    const char *subendp = sphactor_ask_endpoint(sub);
+    zuuid_t *puuid = sphactor_ask_uuid(pub);
+    zuuid_t *suuid = sphactor_ask_uuid(sub);
     char *endpointest = (char *)malloc( (10 + strlen(zuuid_str(puuid) ) )  * sizeof(char) );
     sprintf( endpointest, "inproc://%s", zuuid_str(puuid));
     assert( streq( pubendp, endpointest));
     sprintf( endpointest, "inproc://%s", zuuid_str(suuid));
     assert( streq( subendp, endpointest));
     //  connect sub to pub
-    int rc = sphactor_connect(sub, pubendp);
+    int rc = sphactor_ask_connect(sub, pubendp);
     assert( rc == 0);
     //  disconnect sub to pub
-    rc = sphactor_disconnect(sub, pubendp);
+    rc = sphactor_ask_disconnect(sub, pubendp);
     assert( rc == 0);
 
     zstr_free( &endpointest );
@@ -478,8 +478,8 @@ sphactor_test (bool verbose)
     // sphactor_hello test
     sphactor_t *hello1 = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     sphactor_t *hello2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
-    sphactor_connect(hello1, sphactor_endpoint(hello2));
-    sphactor_connect(hello2, sphactor_endpoint(hello1));
+    sphactor_ask_connect(hello1, sphactor_ask_endpoint(hello2));
+    sphactor_ask_connect(hello2, sphactor_ask_endpoint(hello1));
     zstr_sendm(hello1->actor, "SEND");
     zstr_sendm(hello1->actor, "HELLO");
     zstr_sendm(hello1->actor, "WORLD");
@@ -524,12 +524,12 @@ sphactor_test (bool verbose)
     {
         sphactor_t *spawn = sphactor_new( spawn_sphactor, NULL, NULL, NULL );
         if (verbose)
-            zsys_info("Sphactor number %d %s spawned", i+1, sphactor_name(spawn));
+            zsys_info("Sphactor number %d %s spawned", i+1, sphactor_ask_name(spawn));
         else {
-            sphactor_name(spawn);   // to cache the name (somehow NAME ends up in actor) Hello actor DB0A21 says: NAME
+            sphactor_ask_name(spawn);   // to cache the name (somehow NAME ends up in actor) Hello actor DB0A21 says: NAME
         }
         if (prev)
-            sphactor_connect(prev, sphactor_endpoint(spawn));
+            sphactor_ask_connect(prev, sphactor_ask_endpoint(spawn));
         zlist_append(spawned_actors, spawn);
         prev = spawn;
         zclock_sleep(10);
@@ -538,7 +538,7 @@ sphactor_test (bool verbose)
     zsys_info("%i Actors spawned in %d microseconds (%.6f ms)", limit, end-start, (end-start)/1000.f);
     zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
-    zstr_sendf(prev->actor, "HELLO from %s", sphactor_name(prev));
+    zstr_sendf(prev->actor, "HELLO from %s", sphactor_ask_name(prev));
     zclock_sleep(200);
     while (zlist_size(spawned_actors) > 0)
     {
