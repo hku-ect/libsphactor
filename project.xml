@@ -9,11 +9,11 @@
     unique_class_name = "0"
     >
     <include filename = "license.xml" />
-    <version major = "0" minor = "0" patch = "1" />
+    <version major = "0" minor = "1" patch = "0" />
     <use project = "czmq" />
 
     <class name = "sphactor" />
-    <class name = "sphactor_node" />
+    <class name = "sphactor_actor" />
     <target name = "travis" />
     <target name = "vs2015" />
 </project>
