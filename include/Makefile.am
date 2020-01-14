@@ -5,7 +5,7 @@
 include_HEADERS = \
     libsphactor.h \
     sphactor.h \
-    sphactor_node.h \
+    sphactor_actor.h \
     sphactor_library.h
 
 

@@ -10,7 +10,7 @@
     <ClCompile Include="..\..\..\..\src\sphactor.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\src\sphactor_node.c">
+    <ClCompile Include="..\..\..\..\src\sphactor_actor.c">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\sphactor_private_selftest.c">

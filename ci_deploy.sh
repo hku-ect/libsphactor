@@ -22,8 +22,8 @@ if [ "$BUILD_TYPE" == "default" ]; then
     cd -
 elif [ "$BUILD_TYPE" == "bindings" ] && [ "$BINDING" == "jni" ]; then
     ( cd bindings/jni && TERM=dumb PKG_CONFIG_PATH=/tmp/lib/pkgconfig ./gradlew clean bintrayUpload )
-    cp bindings/jni/android/libsphactor-android.jar libsphactor-android-0.0.1.jar
-    export LIBSPHACTOR_DEPLOYMENT=libsphactor-android-0.0.1.jar
+    cp bindings/jni/android/libsphactor-android.jar libsphactor-android-0.1.0.jar
+    export LIBSPHACTOR_DEPLOYMENT=libsphactor-android-0.1.0.jar
 else
     export LIBSPHACTOR_DEPLOYMENT=""
 fi
