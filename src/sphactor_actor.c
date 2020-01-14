@@ -66,7 +66,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     {
         self->uuid = zuuid_new ();
     }
-    //  Default name for node is first 6 characters of UUID:
+    //  Default name for actor is first 6 characters of UUID:
     //  the shorter string is more readable in logs
     if ( self->name == NULL )
     {
@@ -238,7 +238,7 @@ sphactor_actor_poller_remove (sphactor_actor_t *self, void * fd)
 }
 
 
-//  Here we handle incoming message from the node
+//  Here we handle incoming (API) messages from the pipe from the controller (main thread)
 
 static void
 sphactor_actor_recv_api (sphactor_actor_t *self)
@@ -301,7 +301,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
             zstr_send ( self->pub, self->name );
     }
     else
-    if (streq (command, "TRIGGER"))     //  trigger the node to run its callback
+    if (streq (command, "TRIGGER"))     //  trigger the actor to run its callback
     {
         sphactor_event_t ev = { NULL, "SOCK", self->name, zuuid_str(self->uuid) };
         zmsg_t *retmsg = self->handler( &ev, self->handler_args);
@@ -646,7 +646,7 @@ sphactor_actor_test (bool verbose)
     char *endpoint = zstr_recv(sphactor_actor);
 
     // send something through the pub socket  and receive it
-    // the SEND command returns the name of the node
+    // the SEND command returns the name of the actor
     zsock_t *sub = zsock_new_sub(endpoint, "");
     assert(sub);
     zstr_send(sphactor_actor, "SEND");
