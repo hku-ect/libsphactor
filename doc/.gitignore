@@ -13,8 +13,8 @@
 # Ignore the source doc texts generated from program sources
 sphactor.txt
 sphactor.doc
-sphactor_node.txt
-sphactor_node.doc
+sphactor_actor.txt
+sphactor_actor.doc
 
 # Make sure to track the manually maintained project description
 !*.adoc

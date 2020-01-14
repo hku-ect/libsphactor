@@ -27,7 +27,7 @@
     </method>
 
     <constructor>
-        Constructor, creates a new Sphactor node. 
+        Constructor, creates a new Sphactor instance. 
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1" />
         <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
@@ -35,7 +35,7 @@
     </constructor>
 
     <constructor name = "new_by_type">
-        Constructor, creates a new Sphactor node by its typename. 
+        Constructor, creates a new Sphactor instance by its typename. 
         <argument name = "actor_type" type = "string" />
         <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
@@ -43,79 +43,79 @@
     </constructor>
 
     <destructor>
-        Destructor, destroys a Sphactor node. 
+        Destructor, destroys a Sphactor instance. 
     </destructor>
 
-    <method name = "uuid">
+    <method name = "ask uuid">
         Return our sphactor's UUID string, after successful initialization
         <return type = "zuuid" />
     </method>
 
-    <method name = "name">
+    <method name = "ask name">
         Return our sphactor's name, after successful initialization. First 6
         characters of the UUID by default.
         <return type = "string" />
     </method>
 
-    <method name = "actor type">
+    <method name = "ask actor type">
         Return our sphactor's type, after successful initialization. 
         NULL by default.
         <return type = "string" />
     </method>
 
-    <method name = "endpoint">
+    <method name = "ask endpoint">
         Return our sphactor's endpoint, after successful initialization. 
         The endpoint is usually inproc://{uuid}
         <return type = "string" />
     </method>
 
-    <method name = "set name">
-        Set the public name of this sphactor node overriding the default. 
+    <method name = "ask set name">
+        Set the public name of this Sphactor instance overriding the default. 
         <argument name = "name" type = "string" />
     </method>
 
-    <method name = "set actor type">
+    <method name = "ask set actor type">
         Set the actor's type. 
         <argument name = "actor_type" type = "string" />
     </method>
 
-    <method name = "set timeout">
-        Set the timeout of this sphactor node. This is used for the timeout 
-        of the poller so the sphactor is looped for a fixed interval. Note
-        that the sphactor's method receives a NULL message if it is 
+    <method name = "ask set timeout">
+        Set the timeout of this Sphactor's actor. This is used for the timeout 
+        of the poller so the sphactor actor is looped for a fixed interval. Note
+        that the sphactor's actor method receives a NULL message if it is 
         triggered by timeout event as opposed to when triggered by a socket 
         event. By default the timeout is -1 implying it never timeouts.
         <argument name = "timeout" type = "msecs" />
     </method>
 
-    <method name = "get timeout">
-        Return the current timeout of this sphactor node's poller. By default 
+    <method name = "ask timeout">
+        Return the current timeout of this sphactor actor's poller. By default 
         the timeout is -1 which means it never times out but only triggers 
         on socket events.
         <return type = "msecs" />
     </method>
 
-    <method name = "connect">
-        Connect the node's sub socket to a pub endpoint. Returns 0 if succesful -1 on
+    <method name = "ask connect">
+        Connect the actor's sub socket to a pub endpoint. Returns 0 if succesful -1 on
         failure.
         <argument name = "endpoint" type="string" />
         <return type = "integer" />
     </method>
 
-    <method name = "disconnect">
-        Disconnect the node's sub socket from a pub endpoint. Returns 0 if succesful -1 on
+    <method name = "ask disconnect">
+        Disconnect the actor's sub socket from a pub endpoint. Returns 0 if succesful -1 on
         failure.
 	<argument name = "endpoint" type="string" />
         <return type = "integer" />
     </method>
 
     <method name = "socket">
-        Return socket for talking to the sphactor node and for polling.
+        Return socket for talking to the actor and for polling.
         <return type = "zsock" />
     </method>
 
-    <method name = "set verbose">
-        Set the verbosity of the node. 
+    <method name = "ask set verbose">
+        Set the verbosity of the actor. 
         <argument name = "on" type = "boolean" />
     </method>
 

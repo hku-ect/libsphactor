@@ -3,8 +3,8 @@
 
     Copyright (c) the Contributors as noted in the AUTHORS file.
 
-    This file is part of Zyre, an open-source framework for proximity-based
-    peer-to-peer applications -- See http://zyre.org.
+    This file is part of Sphactor, an open-source framework for high level
+    actor model concurrency --- http://sphactor.org
 
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -27,8 +27,8 @@
 
 //  SPHACTOR version macros for compile-time API detection
 #define SPHACTOR_VERSION_MAJOR 0
-#define SPHACTOR_VERSION_MINOR 0
-#define SPHACTOR_VERSION_PATCH 1
+#define SPHACTOR_VERSION_MINOR 1
+#define SPHACTOR_VERSION_PATCH 0
 
 #define SPHACTOR_MAKE_VERSION(major, minor, patch) \
     ((major) * 10000 + (minor) * 100 + (patch))
@@ -67,13 +67,13 @@
 //  These classes are stable or legacy and built in all releases
 typedef struct _sphactor_t sphactor_t;
 #define SPHACTOR_T_DEFINED
-typedef struct _sphactor_node_t sphactor_node_t;
-#define SPHACTOR_NODE_T_DEFINED
+typedef struct _sphactor_actor_t sphactor_actor_t;
+#define SPHACTOR_ACTOR_T_DEFINED
 
 
 //  Public classes, each with its own header file
 #include "sphactor.h"
-#include "sphactor_node.h"
+#include "sphactor_actor.h"
 
 #ifdef SPHACTOR_BUILD_DRAFT_API
 

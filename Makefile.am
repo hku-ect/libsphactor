@@ -41,6 +41,7 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
+    bindings \
     README.md \
     src/sphactor_classes.h
 

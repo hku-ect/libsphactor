@@ -14,7 +14,7 @@ pkgconfig_DATA = src/libsphactor.pc
 
 src_libsphactor_la_SOURCES = \
     src/sphactor.c \
-    src/sphactor_node.c \
+    src/sphactor_actor.c \
     src/platform.h
 
 if ENABLE_DRAFTS
@@ -54,7 +54,7 @@ endif #ENABLE_SPHACTOR_SELFTEST
 apidir = @datadir@/zproject/libsphactor
 dist_api_DATA = \
     api/sphactor.api \
-    api/sphactor_node.api
+    api/sphactor_actor.api
 
 # define custom target for all products of /src
 src: \

@@ -6,8 +6,8 @@
     -------------------------------------------------------------------------
     Copyright (c) the Contributors as noted in the AUTHORS file.
 
-    This file is part of Zyre, an open-source framework for proximity-based
-    peer-to-peer applications -- See http://zyre.org.
+    This file is part of Sphactor, an open-source framework for high level
+    actor model concurrency --- http://sphactor.org
 
     This Source Code Form is subject to the terms of the Mozilla Public
     License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -34,7 +34,7 @@ static test_item_t
 all_tests [] = {
 // Tests for stable public classes:
     { "sphactor", sphactor_test, true, true, NULL },
-    { "sphactor_node", sphactor_node_test, true, true, NULL },
+    { "sphactor_actor", sphactor_actor_test, true, true, NULL },
     {NULL, NULL, 0, 0, NULL}          //  Sentinel
 };
 
