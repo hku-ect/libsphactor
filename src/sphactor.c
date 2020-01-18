@@ -33,6 +33,8 @@ struct _sphactor_t {
     zuuid_t *uuid;              //  Copy of our actor's uuid
     char    *endpoint;          //  Copy of our actor's endpoint
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
+    int     posx;               //  XY position is used when visualising actors
+    int     posy;
 };
 
 //  Hash table for the actor_type register of actors
@@ -223,6 +225,28 @@ sphactor_ask_set_verbose (sphactor_t *self, bool on)
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
     zstr_sendf( self->actor, "%d", on);
+}
+
+void
+sphactor_set_position (sphactor_t *self, int x, int y)
+{
+    assert (self);
+    self->posx = x;
+    self->posy = y;
+}
+
+int
+sphactor_position_x (sphactor_t *self)
+{
+    assert (self);
+    return self->posx;
+}
+
+int
+sphactor_position_y (sphactor_t *self)
+{
+    assert (self);
+    return self->posy;
 }
 
 zconfig_t *
@@ -418,11 +442,15 @@ sphactor_test (bool verbose)
     zhash_destroy(&actors_reg);
 
     //  @selftest
-    //  Simple create/destroy/name/uuid test
+    //  Simple create/destroy/name/position/uuid test
     sphactor_t *self = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (self);
     const zuuid_t *uuidtest = sphactor_ask_uuid(self);
     assert(uuidtest);
+    // position test
+    sphactor_set_position(self, 23, 24);
+    assert( sphactor_position_x(self) == 23 );
+    assert( sphactor_position_y(self) == 24 );
     //  name should be the first 6 chars from the uuid
     const char *name = sphactor_ask_name( self );
     char *name2 = (char *) zmalloc (7);
