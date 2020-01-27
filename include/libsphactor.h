@@ -18,6 +18,9 @@
 #include "sphactor_library.h"
 
 //  Add your own public definitions here, if you need them
+#ifdef __cplusplus
+#include "sphactor.hpp"
+#endif
 
 // structure to pass to the zactor
 typedef struct {
