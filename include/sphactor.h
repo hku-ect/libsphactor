@@ -123,6 +123,18 @@ SPHACTOR_EXPORT zsock_t *
 SPHACTOR_EXPORT void
     sphactor_ask_set_verbose (sphactor_t *self, bool on);
 
+//  Set the stage position of the actor.
+SPHACTOR_EXPORT void
+    sphactor_set_position (sphactor_t *self, int x, int y);
+
+//  Return the X position of the actor.
+SPHACTOR_EXPORT int
+    sphactor_position_x (sphactor_t *self);
+
+//  Return the Y position of the actor.
+SPHACTOR_EXPORT int
+    sphactor_position_y (sphactor_t *self);
+
 //  Create new zconfig
 SPHACTOR_EXPORT zconfig_t *
     sphactor_zconfig_new (const char *filename);

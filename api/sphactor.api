@@ -105,7 +105,7 @@
     <method name = "ask disconnect">
         Disconnect the actor's sub socket from a pub endpoint. Returns 0 if succesful -1 on
         failure.
-	<argument name = "endpoint" type="string" />
+        <argument name = "endpoint" type="string" />
         <return type = "integer" />
     </method>
 
@@ -117,6 +117,22 @@
     <method name = "ask set verbose">
         Set the verbosity of the actor. 
         <argument name = "on" type = "boolean" />
+    </method>
+
+    <method name = "set position">
+        Set the stage position of the actor.
+        <argument name = "x" type = "integer" />
+        <argument name = "y" type = "integer" />
+    </method>
+
+    <method name = "position x">
+        Return the X position of the actor.
+        <return type = "integer" />
+    </method>
+
+    <method name = "position y">
+        Return the Y position of the actor.
+        <return type = "integer" />
     </method>
 
     <method name = "zconfig new" singleton="1">
