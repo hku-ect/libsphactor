@@ -237,18 +237,18 @@ sphactor_zconfig_new( const char* filename )
 zconfig_t *
 sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 {
-    zconfig_t *znodes = zconfig_locate (root, "actors");
-    if ( znodes == NULL ) {
-        znodes = zconfig_new("actors", root);
+    zconfig_t *sphactors = zconfig_locate (root, "actors");
+    if ( sphactors == NULL ) {
+        sphactors = zconfig_new("actors", root);
     }
     
-    zconfig_t *curNode = zconfig_new("actor", znodes);
+    zconfig_t *curActor = zconfig_new("actor", sphactors);
     
     zconfig_t *zuuid, *ztype, *zname, *zendpoint;
-    zuuid = zconfig_new("uuid", curNode);
-    ztype = zconfig_new("type", curNode);
-    zname = zconfig_new("name", curNode);
-    zendpoint = zconfig_new("endpoint", curNode);
+    zuuid = zconfig_new("uuid", curActor);
+    ztype = zconfig_new("type", curActor);
+    zname = zconfig_new("name", curActor);
+    zendpoint = zconfig_new("endpoint", curActor);
     
     sphactor_ask_uuid (self);
     zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
@@ -259,7 +259,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     zstr_free(&type);
     
-    return curNode;
+    return curActor;
 }
 
 int
@@ -565,21 +565,21 @@ sphactor_test (bool verbose)
     
     zconfig_destroy(&config);
     
-    // load zconfig file, find nodes
+    // load zconfig file, find actors
     config = zconfig_load(fileName);
-    zconfig_t *nodes = zconfig_locate(config, "actors");
-    zconfig_t *node1 = zconfig_locate(nodes, "actor");
-    zconfig_t *node2 = zconfig_next(node1);
+    zconfig_t *sphactors = zconfig_locate(config, "actors");
+    zconfig_t *sphact1 = zconfig_locate(sphactors, "actor");
+    zconfig_t *sphact2 = zconfig_next(sphact1);
     
-    char* node1uuid = zconfig_value(zconfig_locate(node1, "uuid"));
-    char* node2uuid = zconfig_value(zconfig_locate(node2, "uuid"));
+    char* sphact1uuid = zconfig_value(zconfig_locate(sphact1, "uuid"));
+    char* sphact2uuid = zconfig_value(zconfig_locate(sphact2, "uuid"));
     
     // check that the saved uuid's are correct
-    zsys_info("%s == %s", zuuid_str(actor1->uuid), node1uuid);
-    zsys_info("%s == %s", zuuid_str(actor2->uuid), node2uuid);
+    zsys_info("%s == %s", zuuid_str(actor1->uuid), sphact1uuid);
+    zsys_info("%s == %s", zuuid_str(actor2->uuid), sphact2uuid);
     
-    assert(streq(zuuid_str(actor1->uuid),node1uuid));
-    assert(streq(zuuid_str(actor2->uuid),node2uuid));
+    assert(streq(zuuid_str(actor1->uuid),sphact1uuid));
+    assert(streq(zuuid_str(actor2->uuid),sphact2uuid));
     
     remove(fileName);
     zconfig_destroy(&config);
