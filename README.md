@@ -126,7 +126,7 @@ You can now use libsphactor as a static (/usr/local/lib/libsphactor.a) or dynami
 Unfortunately we have no instructions for Windows just yet. Bare with us or help us out by sending us a Pull Request.
 
 ---
-### Minimal example app
+## Minimal example in C
 
 test.c:
 ```c
@@ -224,4 +224,88 @@ I: 19-12-03 13:20:49 Hello2 actor A8D382 says: SPACELINGS
 You can also use the static lib instead of the dynamic one:
 ```
 gcc -o test main.c /usr/local/lib/libsphactor.a /usr/lib/x86_64-linux-gnu/libczmq.a -l zmq -lpthread
+```
+
+## Minimal example in C++
+
+```cpp
+#include <iostream>
+#include "libsphactor.h"
+
+// g++ sphactor_selftest.cpp -o test -I ../include/ .libs/libsphactor.a -l czmq
+
+class Test
+{
+public:
+
+    Test() {
+    }
+
+    ~Test() { }
+
+    zmsg_t *
+    handleMsg( sphactor_event_t *event ) {
+        if ( event->msg == nullptr ) return nullptr;
+        char *cmd = zmsg_popstr(event->msg);
+        zsys_info("Cpp actor %s says: %s", event->name, cmd);
+        // if there are strings left publish them
+        if ( zmsg_size(event->msg) > 0 )
+        {
+            return event->msg;
+        }
+        else
+        {
+            zmsg_destroy(&event->msg);
+        }
+        return nullptr;
+    }
+};
+
+int main()
+{
+    Test *a = new Test()
+    Test *b = new Test();
+
+    // register the Test class as an actor
+    sphactor_register("cpp test", sphactor_member_handler<Test>);
+
+    // create actor controllers for the actors
+    sphactor_t *actora = sphactor_new(a, "hello-a", nullptr);
+    sphactor_t *actorb = sphactor_new_by_type("cpp test", b, "hello-b", nullptr);
+
+    // get the actor name
+    const char *name = sphactor_ask_name(actora);
+    assert( streq(name, "hello-a"));
+
+    // set actora to be verbose
+    sphactor_ask_set_verbose(actora, true);
+
+    // connect the actors to each other
+    sphactor_ask_connect(actora, sphactor_ask_endpoint(actorb));
+    sphactor_ask_connect(actorb, sphactor_ask_endpoint(actora));
+    zclock_sleep(10); // give time to connect
+
+    // initiate a SEND (SEND API command just sends what it receives)
+    zstr_sendm(sphactor_socket(actora), "SEND");
+    zstr_sendm(sphactor_socket(actora), "HELLO");
+    zstr_sendm(sphactor_socket(actora), "WORLD");
+    zstr_sendm(sphactor_socket(actora), "AND");
+    zstr_sendm(sphactor_socket(actora), "ALIEN");
+    zstr_send(sphactor_socket(actora), "SPACELINGS");
+    zclock_sleep(10); // give time to see messages printed
+
+    // cleanup
+    sphactor_destroy(&actora);
+    sphactor_destroy(&actorb);
+    delete( a );
+    delete( b );
+    sphactor_dispose();
+
+    return 0;
+}
+```
+
+Compile with:
+```
+g++ test.cpp -o test -lsphactor -lczmq
 ```
