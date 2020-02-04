@@ -83,7 +83,7 @@ SPHACTOR_EXPORT void
 
 //
 SPHACTOR_EXPORT int
-    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg);
 
 //
 SPHACTOR_EXPORT int

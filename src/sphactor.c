@@ -296,7 +296,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 }
 
 int
-sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constr )
+sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args )
 {
     assert(handler);
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
@@ -309,7 +309,8 @@ sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor
     _sphactor_funcs_t *funcs = (_sphactor_funcs_t *) zmalloc (sizeof (_sphactor_funcs_t));
     assert (funcs);
     funcs->handler = handler;
-    funcs->constructor = *constr; // can be NULL
+    funcs->constructor = constructor; // can be NULL
+    funcs->constructor_args = constructor_args; // can be NULL
 
     int rc = zhash_insert(actors_reg, actor_type, funcs);
     assert( rc == 0 );
@@ -480,7 +481,7 @@ sphactor_test (bool verbose)
     zsys_init();  // otherwise zsys_log won't print anything
     // register unregister test
     actors_reg = zhash_new();
-    sphactor_register("hello", hello_sphactor, NULL);
+    sphactor_register("hello", hello_sphactor, NULL, NULL);
     _sphactor_funcs_t *item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert(item->handler);
@@ -491,7 +492,7 @@ sphactor_test (bool verbose)
     assert( zhash_size(actors_reg) == 0 );
 
     // register and construction test
-    sphactor_register("test", regtest_handler, regtest_constructor);
+    sphactor_register("test", regtest_handler, regtest_constructor, "test");
     item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
@@ -499,7 +500,7 @@ sphactor_test (bool verbose)
     assert(item->handler == regtest_handler );
     assert(item->constructor == regtest_constructor );
     // run constructor
-    regtest_actor *instance = (regtest_actor *)item->constructor("test");
+    regtest_actor *instance = (regtest_actor *)item->constructor(item->constructor_args);
     assert( instance->name == "test" );
     // start actor
     sphactor_t *regtestactor = sphactor_new(item->handler, (void *)instance, NULL, NULL);
