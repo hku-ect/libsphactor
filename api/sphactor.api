@@ -10,7 +10,7 @@
     <callback_type name = "constructor_fn">
         Callback function to create actor instances
         <argument name = "arg" type = "anything" />
-        return type = "anything" />
+        <return type = "anything" />
     </callback_type>
 
     <method name = "register" singleton = "1">
