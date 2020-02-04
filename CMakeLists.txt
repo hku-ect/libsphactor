@@ -386,12 +386,6 @@ set(TEST_CLASSES
     sphactor_actor
 )
 
-IF (ENABLE_DRAFTS)
-    list (APPEND TEST_CLASSES
-    private_classes
-    )
-ENDIF (ENABLE_DRAFTS)
-
 
 add_custom_target(
     copy-selftest-ro ALL
