@@ -76,7 +76,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     else {
         // If we pass a string literal, we can't free self->name on destroy...
         //  so malloc and memcpy
-        self->name = (char *) zmalloc (strlen(shim->name));
+        self->name = (char *) zmalloc (strlen(shim->name) + 1 );
         memcpy (self->name, shim->name, strlen(shim->name));
     }
 
