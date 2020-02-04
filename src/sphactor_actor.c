@@ -718,7 +718,7 @@ sphactor_actor_test (bool verbose)
     sphactor_shim_t lifecycle_tester = { &sph_actor_lifecycle, NULL, NULL, NULL };
     zactor_t *sphactor_lifecycle_tester = zactor_new (sphactor_actor_run, &lifecycle_tester);
     assert(sphactor_lifecycle_tester);
-    zclock_sleep(20);
+    zclock_sleep(60);
     zactor_destroy( &sphactor_lifecycle_tester );
 
 
