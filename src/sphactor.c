@@ -421,20 +421,30 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
 
 typedef struct {
     char * name;
-} test_actor;
+} regtest_actor;
 
-static void
-test_constructor(void *name) {
-    test_actor *test = (test_actor *) zmalloc (sizeof (test_actor));
-    assert(test);
-    zsys_info("test_constructor: ");
-    test->name = (char *)name;
+static void *
+regtest_constructor(void *args) {
+    regtest_actor *inst = (regtest_actor *) zmalloc (sizeof (regtest_actor));
+    assert(inst);
+    zsys_info("regtest_constructor: ");
+    inst->name = (char *)args; // not sure we this is safe, should we strdup? It works for the test?
+    return inst;
 }
 
 static zmsg_t *
-test_handler( sphactor_event_t *ev, void* args)
+regtest_handler( sphactor_event_t *ev, void* args)
 {
     zsys_info("test_handler: typ: %s", ev->type);
+    regtest_actor *inst = (regtest_actor *)args;
+    assert( streq(inst->name, "test") );
+    zsys_info("regtest_actor name: %s", inst->name);
+    if ( streq( ev->type, "DESTROY" ) )
+    {
+        // zstr_free( &inst->name ); // not needed as the string is on the stack
+        free( inst );
+        inst = NULL;
+    }
     return NULL;
 }
 
@@ -466,6 +476,7 @@ sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
 
+    //  @selftest
     zsys_init();  // otherwise zsys_log won't print anything
     // register unregister test
     actors_reg = zhash_new();
@@ -479,20 +490,25 @@ sphactor_test (bool verbose)
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
 
-    sphactor_register("test", test_handler, test_constructor);
+    // register and construction test
+    sphactor_register("test", regtest_handler, regtest_constructor);
     item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
     assert(item->constructor);
-    assert( item->handler == test_handler );
-    assert(item->constructor == test_constructor );
+    assert(item->handler == regtest_handler );
+    assert(item->constructor == regtest_constructor );
     // run constructor
-    item->constructor(NULL);
+    regtest_actor *instance = (regtest_actor *)item->constructor("test");
+    assert( instance->name == "test" );
+    // start actor
+    sphactor_t *regtestactor = sphactor_new(item->handler, (void *)instance, NULL, NULL);
+    // actor will display event msgs
+    zclock_sleep(100);
     sphactor_unregister("test");
-
+    sphactor_destroy(&regtestactor);
     zhash_destroy(&actors_reg);
 
-    //  @selftest
     //  Simple create/destroy/name/position/uuid test
     sphactor_t *self = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert (self);
