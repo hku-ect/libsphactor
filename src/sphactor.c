@@ -76,7 +76,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 }
 
 sphactor_t *
-sphactor_new_by_type (const char *actor_type, void *args, const char *name, zuuid_t *uuid)
+sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
 {
     _sphactor_funcs_t *funcs = (_sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
     if ( funcs == NULL )
@@ -85,8 +85,8 @@ sphactor_new_by_type (const char *actor_type, void *args, const char *name, zuui
         return NULL;
     }
     // run constructor
-    funcs->constructor(funcs->constructor_args);
-    return sphactor_new( funcs->handler, args, name, uuid);
+    void *instance = funcs->constructor(funcs->constructor_args);
+    return sphactor_new( funcs->handler, instance, name, uuid);
 }
 
 //  --------------------------------------------------------------------------

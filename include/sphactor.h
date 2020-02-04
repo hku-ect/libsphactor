@@ -39,7 +39,7 @@ sphactor_new ( SphactorClass *inst, const char *name=nullptr, zuuid_t *uuid=null
 // void pointer to a costructor
 template<class SphactorClass>
 SPHACTOR_EXPORT void *
-sphactoractor_constructor()
+sphactoractor_constructor(void *arg)
 {
     return new SphactorClass;
 }
@@ -75,7 +75,7 @@ SPHACTOR_EXPORT sphactor_t *
 
 //  Constructor, creates a new Sphactor instance by its typename.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new_by_type (const char *actor_type, void *arg, const char *name, zuuid_t *uuid);
+    sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor instance.
 SPHACTOR_EXPORT void
