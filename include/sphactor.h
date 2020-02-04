@@ -66,9 +66,7 @@ typedef zmsg_t * (sphactor_handler_fn) (
     sphactor_event_t *event, void *arg);
 
 // Callback function to create actor instances
-//
-// return type = "anything" />
-typedef void (sphactor_constructor_fn) (
+typedef void * (sphactor_constructor_fn) (
     void *arg);
 
 //  Constructor, creates a new Sphactor instance.
