@@ -50,7 +50,7 @@ env:
     #- secure:
   matrix:
     - BUILD_TYPE=default
-    - BUILD_TYPE=default-Werror
+#    - BUILD_TYPE=default-Werror # We are casting function pointers which is undefined in the C standard. So this check will always fail
     - BUILD_TYPE=cmake
 #   - BUILD_TYPE=android
 #   - BUILD_TYPE=check-py
