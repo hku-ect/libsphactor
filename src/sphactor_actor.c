@@ -68,7 +68,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     }
     //  Default name for actor is first 6 characters of UUID:
     //  the shorter string is more readable in logs
-    if ( self->name == NULL )
+    if ( shim->name == NULL )
     {
         self->name = (char *) zmalloc (7);
         memcpy (self->name, zuuid_str (self->uuid), 6);
@@ -424,7 +424,7 @@ static zmsg_t *
 sph_actor_lifecycle(sphactor_event_t *ev, void *args)
 {
     static int i = 0;
-    zsys_info("Lifecycle: %i, %s", i, ev->type);
+    zsys_info("%s: %i, %s", ev->name, i, ev->type);
     switch ( i )
     {
     case 0 :
@@ -715,10 +715,10 @@ sphactor_actor_test (bool verbose)
     zactor_destroy (&sphactor_rate_tester);
 
     // lifecycle test
-    sphactor_shim_t lifecycle_tester = { &sph_actor_lifecycle, NULL, NULL, NULL };
+    sphactor_shim_t lifecycle_tester = { &sph_actor_lifecycle, NULL, NULL, "lifecycle_tester" };
     zactor_t *sphactor_lifecycle_tester = zactor_new (sphactor_actor_run, &lifecycle_tester);
     assert(sphactor_lifecycle_tester);
-    zclock_sleep(60);
+    zclock_sleep(200);
     zactor_destroy( &sphactor_lifecycle_tester );
 
 
