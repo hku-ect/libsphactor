@@ -84,8 +84,10 @@ sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
         zsys_error("%s type does not exist as a registered actor type", actor_type);
         return NULL;
     }
-    // run constructor
-    void *instance = funcs->constructor(funcs->constructor_args);
+    // run constructor if any
+    void *instance = NULL;
+    if ( funcs->constructor )
+        void *instance = funcs->constructor(funcs->constructor_args);
     return sphactor_new( funcs->handler, instance, name, uuid);
 }
 
