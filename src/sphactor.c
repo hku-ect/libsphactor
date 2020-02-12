@@ -35,6 +35,7 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
+    sphactor_ui_fn *ui_fn       //  function to generate a UI, defaults to NULL
 };
 
 //  Hash table for the actor_type register of actors
@@ -71,6 +72,8 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
         //self->name = strdup(name);
         sphactor_ask_set_name( self, name );
     }
+
+    self->ui_fn = NULL;
 
     return self;
 }
@@ -258,6 +261,21 @@ sphactor_position_y (sphactor_t *self)
 {
     assert (self);
     return self->posy;
+}
+
+void
+sphactor_set_ui_function (sphactor_t *self, sphactor_ui_fn ui_fn)
+{
+    assert(self);
+    assert(ui_fn);
+    self->ui_fn = ui_fn;
+}
+
+void
+sphactor_run_ui (sphactor_t *self, float delta_time)
+{
+    assert(self);
+    if (self->ui_fn) self->ui_fn( self, delta_time );
 }
 
 zconfig_t *

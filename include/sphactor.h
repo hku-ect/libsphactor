@@ -69,6 +69,10 @@ typedef zmsg_t * (sphactor_handler_fn) (
 typedef void * (sphactor_constructor_fn) (
     void *arg);
 
+// Callback function to render a user interface for actor instances
+typedef void (sphactor_ui_fn) (
+    sphactor_t *actor, float deltatime);
+
 //  Constructor, creates a new Sphactor instance.
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
@@ -167,6 +171,17 @@ SPHACTOR_EXPORT int
 //  Return the Y position of the actor.
 SPHACTOR_EXPORT int
     sphactor_position_y (sphactor_t *self);
+
+//  Set the function for generating the UI
+SPHACTOR_EXPORT void
+    sphactor_set_ui_function (sphactor_t *self, sphactor_ui_fn ui_fn);
+
+//  Calls the ui function for generating the UI. This does
+//  nothing unless you have set a function. The delta time argument
+//  should provide the time between the current and previous frame.
+//  This is common in render loops but is only relevant if you need it.
+SPHACTOR_EXPORT void
+    sphactor_run_ui (sphactor_t *self, float delta_time);
 
 //  Create new zconfig
 SPHACTOR_EXPORT zconfig_t *

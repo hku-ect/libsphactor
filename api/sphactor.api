@@ -13,6 +13,13 @@
         <return type = "anything" />
     </callback_type>
 
+    <callback_type name = "ui_fn">
+        Callback function to render a user interface for actor instances
+        <argument name = "actor" type = "sphactor" />
+        <argument name = "deltaTime" type = "real" />
+        <return type = "nothing" />
+    </callback_type>
+
     <method name = "register" singleton = "1">
         <argument name = "actor_type" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
@@ -140,6 +147,20 @@
     <method name = "position y">
         Return the Y position of the actor.
         <return type = "integer" />
+    </method>
+
+    <method name = "set ui function">
+        Set the function for generating the UI
+        <argument name = "ui fn" type = "sphactor_ui_fn" callback = "1" />
+    </method>
+
+    <method name = "run ui">
+        Calls the ui function for generating the UI. This does 
+        nothing unless you have set a function. The delta time argument
+        should provide the time between the current and previous frame. 
+        This is common in render loops but is only relevant if you need it.
+        <argument name = "delta time" type = "real" />
+        <return type = "nothing" />
     </method>
 
     <method name = "zconfig new" singleton="1">
