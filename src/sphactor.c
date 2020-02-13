@@ -92,7 +92,12 @@ sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
     void *instance = NULL;
     if ( funcs->constructor )
         instance = funcs->constructor(funcs->constructor_args);
-    return sphactor_new( funcs->handler, instance, name, uuid);
+
+    sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
+    assert( self );
+    if ( funcs->ui_fn )
+        sphactor_set_ui_function( self, funcs->ui_fn );
+    return self;
 }
 
 //  --------------------------------------------------------------------------
