@@ -87,7 +87,7 @@ SPHACTOR_EXPORT void
 
 //
 SPHACTOR_EXPORT int
-    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg, sphactor_ui_fn ui_function);
 
 //
 SPHACTOR_EXPORT int
@@ -180,7 +180,8 @@ SPHACTOR_EXPORT void
 //  nothing unless you have set a function. The delta time argument
 //  should provide the time between the current and previous frame.
 //  This is common in render loops but is only relevant if you need it.
-SPHACTOR_EXPORT void
+//  Returns 0 if there was no ui function to call, otherwise 1.
+SPHACTOR_EXPORT int
     sphactor_run_ui (sphactor_t *self, float delta_time);
 
 //  Create new zconfig

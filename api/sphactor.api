@@ -25,6 +25,7 @@
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
         <argument name = "constructor" type = "sphactor_constructor_fn" callback = "1"/>
         <argument name = "constructor_arg" type = "anything" />
+        <argument name = "ui function" type = "sphactor_ui_fn" callback = "1"/>
         <return type = "integer"/>
     </method>
     
@@ -159,8 +160,9 @@
         nothing unless you have set a function. The delta time argument
         should provide the time between the current and previous frame. 
         This is common in render loops but is only relevant if you need it.
+        Returns 0 if there was no ui function to call, otherwise 1.
         <argument name = "delta time" type = "real" />
-        <return type = "nothing" />
+        <return type = "integer" />
     </method>
 
     <method name = "zconfig new" singleton="1">

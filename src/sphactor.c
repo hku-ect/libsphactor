@@ -35,7 +35,7 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
-    sphactor_ui_fn *ui_fn       //  function to generate a UI, defaults to NULL
+    sphactor_ui_fn *ui_fn;      //  function to generate a UI, defaults to NULL
 };
 
 //  Hash table for the actor_type register of actors
@@ -47,6 +47,7 @@ typedef struct  {
     sphactor_handler_fn *handler;
     sphactor_constructor_fn *constructor;
     void *constructor_args; // can be NULL
+    sphactor_ui_fn *ui_fn; // can be NULL
 } _sphactor_funcs_t;
 
 //  --------------------------------------------------------------------------
@@ -271,11 +272,16 @@ sphactor_set_ui_function (sphactor_t *self, sphactor_ui_fn ui_fn)
     self->ui_fn = ui_fn;
 }
 
-void
+int
 sphactor_run_ui (sphactor_t *self, float delta_time)
 {
     assert(self);
-    if (self->ui_fn) self->ui_fn( self, delta_time );
+    if (self->ui_fn)
+    {
+        self->ui_fn( self, delta_time );
+        return 1;
+    }
+    return 0;
 }
 
 zconfig_t *
@@ -316,7 +322,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
 }
 
 int
-sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args )
+sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args, sphactor_ui_fn ui_function )
 {
     assert(handler);
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
@@ -331,6 +337,7 @@ sphactor_register( const char *actor_type, sphactor_handler_fn handler, sphactor
     funcs->handler = handler;
     funcs->constructor = constructor; // can be NULL
     funcs->constructor_args = constructor_args; // can be NULL
+    funcs->ui_fn = ui_function; // can be NULL
 
     int rc = zhash_insert(actors_reg, actor_type, funcs);
     assert( rc == 0 );
@@ -501,7 +508,7 @@ sphactor_test (bool verbose)
     zsys_init();  // otherwise zsys_log won't print anything
     // register unregister test
     actors_reg = zhash_new();
-    sphactor_register("hello", hello_sphactor, NULL, NULL);
+    sphactor_register("hello", hello_sphactor, NULL, NULL, NULL);
     _sphactor_funcs_t *item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert(item->handler);
@@ -512,7 +519,7 @@ sphactor_test (bool verbose)
     assert( zhash_size(actors_reg) == 0 );
 
     // register and construction test
-    sphactor_register("test", regtest_handler, regtest_constructor, "test");
+    sphactor_register("test", regtest_handler, regtest_constructor, "test", NULL);
     item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
