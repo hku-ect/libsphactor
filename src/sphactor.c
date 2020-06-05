@@ -613,7 +613,7 @@ sphactor_test (bool verbose)
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
     sphactor_destroy(&actor2);
-    
+    zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end
     printf ("OK\n");
 }
