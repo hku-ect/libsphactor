@@ -428,20 +428,20 @@ sph_actor_lifecycle(sphactor_event_t *ev, void *args)
     switch ( i )
     {
     case 0 :
-        assert( ev->type == "INIT" );
+        assert( streq( ev->type, "INIT" ) );
         sphactor_actor_set_timeout( (sphactor_actor_t *)ev->actor, 16);
         break;
     case 1 :
-        assert( ev->type == "TIME" );
+        assert( streq( ev->type, "TIME") );
         // reset the timeout
         assert( ev->actor->timeout == 16 );
         sphactor_actor_set_timeout( (sphactor_actor_t *)ev->actor, -1);
         break;
     case 2 :
-        assert( ev->type == "STOP" );
+        assert( streq( ev->type, "STOP" ) );
         break;
     case 3 :
-        assert( ev->type == "DESTROY" );
+        assert( streq( ev->type, "DESTROY" ) );
         break;
     default:
         assert( false );
@@ -726,6 +726,6 @@ sphactor_actor_test (bool verbose)
 
 
     //  @end
-
+    zsys_shutdown();  //  needed by windows
     printf ("OK\n");
 }
