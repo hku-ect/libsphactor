@@ -726,6 +726,6 @@ sphactor_actor_test (bool verbose)
 
 
     //  @end
-
+    zsys_shutdown();  //  needed by windows
     printf ("OK\n");
 }
