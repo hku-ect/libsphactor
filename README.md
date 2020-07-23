@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/hku-ect/libsphactor.svg?branch=master)](https://travis-ci.org/hku-ect/libsphactor)
+[![Build status](https://ci.appveyor.com/api/projects/status/2hggurtvkok3uqvl?svg=true)](https://ci.appveyor.com/project/sphaero/libsphactor-bdyyp)
+
 # libsphactor
 
 "Extended nodal actor framework based on zactor"
