@@ -35,6 +35,7 @@ all_tests [] = {
 // Tests for stable public classes:
     { "sphactor", sphactor_test, true, true, NULL },
     { "sphactor_actor", sphactor_actor_test, true, true, NULL },
+    { "sphactor_report", sphactor_report_test, true, true, NULL },
     {NULL, NULL, 0, 0, NULL}          //  Sentinel
 };
 

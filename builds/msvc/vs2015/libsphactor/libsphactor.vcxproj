@@ -87,6 +87,9 @@
     <ClCompile Include="..\..\..\..\src\sphactor_actor.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\sphactor_report.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\sphactor_private_selftest.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>

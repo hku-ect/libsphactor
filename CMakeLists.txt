@@ -91,14 +91,14 @@ configure_file("${PROJECT_BINARY_DIR}/platform.h.in" "${PROJECT_BINARY_DIR}/plat
 if (WIN32)
     #The MSVC C compiler is too out of date,
     #so the sources have to be compiled as c++
-    #if (MSVC AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    #    enable_language(CXX)
-    #    file(GLOB sources "${SOURCE_DIR}/src/*.c")
-    #    set_source_files_properties(
-    #        ${sources}
-    #        PROPERTIES LANGUAGE CXX
-    #    )
-    #endif()
+    if (MSVC AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+        enable_language(CXX)
+        file(GLOB sources "${SOURCE_DIR}/src/*.c")
+        set_source_files_properties(
+            ${sources}
+            PROPERTIES LANGUAGE CXX
+        )
+    endif()
     set(MORE_LIBRARIES ws2_32 Rpcrt4 Iphlpapi)
 endif()
 
@@ -175,6 +175,7 @@ set (sphactor_headers
     include/libsphactor.h
     include/sphactor.h
     include/sphactor_actor.h
+    include/sphactor_report.h
 )
 
 source_group ("Header Files" FILES ${sphactor_headers})
@@ -189,6 +190,7 @@ include_directories("${SOURCE_DIR}/src" "${SOURCE_DIR}/include" "${PROJECT_BINAR
 set (sphactor_sources
     src/sphactor.c
     src/sphactor_actor.c
+    src/sphactor_report.c
 )
 IF (ENABLE_DRAFTS)
     list (APPEND sphactor_sources
@@ -390,6 +392,7 @@ endif()
 set(TEST_CLASSES
     sphactor
     sphactor_actor
+    sphactor_report
 )
 
 
@@ -407,6 +410,7 @@ if (NOT TARGET make-selftest-rw)
     )
 endif()
 
+
 set_directory_properties(
     PROPERTIES
     ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_BINARY_DIR}/src/selftest-ro;${PROJECT_BINARY_DIR}/src/selftest-rw"
@@ -418,11 +422,11 @@ foreach(TEST_CLASS ${TEST_CLASSES})
         COMMAND sphactor_selftest --continue --verbose --test ${TEST_CLASS}
     )
     IF (WIN32 AND CMAKE_PREFIX_PATH)
-		file(TO_NATIVE_PATH "${CMAKE_PREFIX_PATH}" CMAKE_PREFIX_PATH_WIN)
-		set_tests_properties(
-			${TEST_CLASS}
-			PROPERTIES ENVIRONMENT "PATH=%PATH%\;${CMAKE_PREFIX_PATH_WIN}\\bin"
-		)
+        file(TO_NATIVE_PATH "${CMAKE_PREFIX_PATH}" CMAKE_PREFIX_PATH_WIN)
+        set_tests_properties(
+            ${TEST_CLASS}
+            PROPERTIES ENVIRONMENT "PATH=%PATH%\;${CMAKE_PREFIX_PATH_WIN}\\bin"
+        )
     ENDIF (WIN32 AND CMAKE_PREFIX_PATH)
     set_tests_properties(
         ${TEST_CLASS}

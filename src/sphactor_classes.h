@@ -35,6 +35,8 @@
 //  External API
 #include "../include/libsphactor.h"
 
+//  Private external dependencies
+
 //  Opaque class structures to allow forward references
 
 //  Extra headers

@@ -69,11 +69,14 @@ typedef struct _sphactor_t sphactor_t;
 #define SPHACTOR_T_DEFINED
 typedef struct _sphactor_actor_t sphactor_actor_t;
 #define SPHACTOR_ACTOR_T_DEFINED
+typedef struct _sphactor_report_t sphactor_report_t;
+#define SPHACTOR_REPORT_T_DEFINED
 
 
 //  Public classes, each with its own header file
 #include "sphactor.h"
 #include "sphactor_actor.h"
+#include "sphactor_report.h"
 
 #ifdef SPHACTOR_BUILD_DRAFT_API
 
