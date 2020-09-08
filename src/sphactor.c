@@ -35,6 +35,7 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
+    sphactor_actor_t *_sph_act  //  pointer to the actor in the thread, internal use only!
 };
 
 //  Hash table for the actor_type register of actors
@@ -58,7 +59,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     sphactor_shim_t shim = { handler, args, uuid, name };
     self->actor = zactor_new( sphactor_actor_run, &shim);
-
+    self->_sph_act = NULL;
     if (name)
     {
         //self->name = strdup(name);
@@ -94,6 +95,7 @@ sphactor_destroy (sphactor_t **self_p)
         zstr_free( &self->name);
         if (self->uuid) zuuid_destroy(&self->uuid);
         zstr_free(&self->endpoint);
+        self->_sph_act = NULL;   //  we don't own the pointer!!
         //  Free object itself
 
         free (self);
@@ -284,6 +286,30 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zstr_free(&type);
     
     return curActor;
+}
+
+
+sphactor_report_t *
+sphactor_report(sphactor_t *self)
+{
+    if ( self->_sph_act == NULL )
+    {
+        int rc = zstr_send( self->actor, "INSTANCE" );
+        assert( rc == 0);
+
+        rc = zsock_recv (self->actor, "p", &self->_sph_act);
+        assert( rc == 0 );
+        if (  self->_sph_act == NULL )
+        {
+            zsys_error( "error requesting the instance pointer for the report" );
+            return NULL;
+        }
+    }
+    // swap the report pointer atomically with NULL
+    sphactor_report_t *report = sphactor_actor_atomic_report( self->_sph_act );
+    // we now own report so the caller must destroy when finished with it
+    // unless it's null of course
+    return report;
 }
 
 int
@@ -613,6 +639,17 @@ sphactor_test (bool verbose)
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
     sphactor_destroy(&actor2);
+
+    // sphactor_report test
+    sphactor_t *reportact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    assert(reportact);
+    zclock_sleep(100);
+    sphactor_report_t *report = sphactor_report(reportact);
+    assert( report );
+    assert( sphactor_report_status( report ) == 1 );
+    sphactor_report_destroy( &report );
+    sphactor_destroy(&reportact);
+
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end
     printf ("OK\n");

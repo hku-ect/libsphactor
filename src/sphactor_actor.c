@@ -20,6 +20,7 @@
 */
 
 #include "sphactor_classes.h"
+#include <stdatomic.h>
 
 //  Structure of our class
 
@@ -43,6 +44,7 @@ struct _sphactor_actor_t {
     void        *handler_args;    //  the arguments to the handler
 //    sphactor_shim_t *shim;
     zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
+    _Atomic     (void*) atomic_report;  // atomic pointer to report data
 };
 
 //  --------------------------------------------------------------------------
@@ -147,6 +149,10 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         zhash_destroy(&self->subs);
 
         zhashx_destroy(&self->fd_handlers);
+        // free the atomic report
+        sphactor_report_t *rep = sphactor_actor_atomic_report(self);
+        if ( rep )
+            sphactor_report_destroy(&rep);
 
         //  Free object itself
         free (self);
@@ -237,6 +243,29 @@ sphactor_actor_poller_remove (sphactor_actor_t *self, void * fd)
     return rc;
 }
 
+void
+sphactor_actor_atomic_set_report( sphactor_actor_t *self, sphactor_report_t *report)
+{
+    // swap the report pointer atomically
+    sphactor_report_t *prev = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)report);
+    // if prev is not NULL we need to destroy it
+    if ( prev != (sphactor_report_t *)NULL )
+    {
+        // destroy the memory it is pointing to
+        sphactor_report_destroy( &prev );
+    }
+    // TODO: for memory efficiency we could reuse the report object?
+}
+
+sphactor_report_t *
+sphactor_actor_atomic_report(sphactor_actor_t *self)
+{
+    // swap the report pointer atomically with NULL
+    sphactor_report_t *report = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)NULL );
+    // we now own report so the caller must destroy when finished with it
+    // unless it's null of course
+    return report;
+}
 
 //  Here we handle incoming (API) messages from the pipe from the controller (main thread)
 
@@ -255,6 +284,14 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
     else
     if (streq (command, "STOP"))
         sphactor_actor_stop (self);
+    else
+    if (streq (command, "INSTANCE"))
+    {
+        // Danger: this method will send the 'self' pointer
+        // over the pipe, internal use only!
+        int rc = zsock_send( self->pipe, "p", self);
+        assert( rc == 0 );
+    }
     else
     if (streq (command, "CONNECT"))
     {
@@ -472,6 +509,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
     zsock_signal (self->pipe, 0);
     //  Signal handler we're initiated
     sphactor_event_t ev = { NULL, "INIT", self->name, zuuid_str(self->uuid), self };
+    sphactor_actor_atomic_set_report( self, sphactor_report_construct( 1, 0, NULL ));
     if ( self->handler)
     {
         zmsg_t *initretmsg = self->handler(&ev, self->handler_args);

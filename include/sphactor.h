@@ -172,6 +172,10 @@ SPHACTOR_EXPORT zconfig_t *
 SPHACTOR_EXPORT zconfig_t *
     sphactor_zconfig_append (sphactor_t *self, zconfig_t *root);
 
+//  Gets the current status report from the actor.
+SPHACTOR_EXPORT sphactor_report_t *
+    sphactor_report (sphactor_t *self);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_test (bool verbose);

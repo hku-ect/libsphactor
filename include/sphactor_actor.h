@@ -88,6 +88,16 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_actor_poller_remove (sphactor_actor_t *self, void *fd);
 
+//  Sets the status report. This is a very specific threadsafe lockfree method
+//  to enable the controlling thread to get this actor's status.
+SPHACTOR_EXPORT void
+    sphactor_actor_atomic_set_report (sphactor_actor_t *self, sphactor_report_t *report);
+
+//  Gets the status report. This is a very specific threadsafe lockfree method
+//  to enable the controlling thread to get this actor's status.
+SPHACTOR_EXPORT sphactor_report_t *
+    sphactor_actor_atomic_report (sphactor_actor_t *self);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_actor_test (bool verbose);

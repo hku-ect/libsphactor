@@ -146,5 +146,10 @@
         <argument name = "root" type="zconfig" />
         <return type = "zconfig" />
     </method>
+
+    <method name = "report">
+        Gets the current status report from the actor.
+        <return type = "sphactor report" />
+    </method>
 </class>
-    
+

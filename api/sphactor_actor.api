@@ -81,4 +81,17 @@
         <argument name = "fd" type = "anything" />
         <return type = "integer" />
     </method>
+
+    <method name = "atomic set report">
+        Sets the status report. This is a very specific threadsafe lockfree method 
+        to enable the controlling thread to get this actor's status.
+        <argument name = "report" type = "sphactor report" />  
+    </method>
+
+    <method name = "atomic report">
+        Gets the status report. This is a very specific threadsafe lockfree method 
+        to enable the controlling thread to get this actor's status.
+        <return type = "sphactor report" />  
+    </method>
+
 </class>
