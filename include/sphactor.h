@@ -152,6 +152,12 @@ SPHACTOR_EXPORT zsock_t *
 SPHACTOR_EXPORT void
     sphactor_ask_set_verbose (sphactor_t *self, bool on);
 
+//  Set the reporting of the actor. Reporting is used for communicating
+//  status reports safely. For example this can be used to render a
+//  visual representation of the actor.
+SPHACTOR_EXPORT void
+    sphactor_ask_set_report (sphactor_t *self, bool on);
+
 //  Set the stage position of the actor.
 SPHACTOR_EXPORT void
     sphactor_set_position (sphactor_t *self, int x, int y);
@@ -172,7 +178,8 @@ SPHACTOR_EXPORT zconfig_t *
 SPHACTOR_EXPORT zconfig_t *
     sphactor_zconfig_append (sphactor_t *self, zconfig_t *root);
 
-//  Gets the current status report from the actor.
+//  Gets the current status report from the actor. A NULL pointer is
+//  returned if no report (reporting disabled) is found.
 SPHACTOR_EXPORT sphactor_report_t *
     sphactor_report (sphactor_t *self);
 

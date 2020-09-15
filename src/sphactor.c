@@ -226,7 +226,15 @@ sphactor_ask_set_verbose (sphactor_t *self, bool on)
 {
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
-    zstr_sendf( self->actor, "%d", on);
+    zstr_sendf( self->actor, on ? "TRUE" : "FALSE");
+}
+
+void
+sphactor_ask_set_report (sphactor_t *self, bool on)
+{
+    assert (self);
+    zstr_sendm (self->actor, "SET REPORT");
+    zstr_sendf( self->actor, on ? "TRUE" : "FALSE");
 }
 
 void

@@ -381,7 +381,19 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
     }
     else
     if (streq (command, "SET VERBOSE"))
-        self->verbose = true;
+    {
+        char *cmd = zmsg_popstr(request);
+        if ( cmd )
+        {
+            if ( streq(cmd, "FALSE" ) )
+                self->verbose = false;
+            else
+                self->verbose = true;
+            zstr_free( &cmd );
+        }
+        else
+            self->verbose = false;
+    }
     else
     if (streq (command, "SET REPORT" ))  // Toggle report
     {
