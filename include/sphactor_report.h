@@ -24,6 +24,15 @@ extern "C" {
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
+#define SPHACTOR_REPORT_INIT 0               //
+#define SPHACTOR_REPORT_IDLE 1               //
+#define SPHACTOR_REPORT_STOP 2               //
+#define SPHACTOR_REPORT_DESTROY 3            //
+#define SPHACTOR_REPORT_SOCK 4               //
+#define SPHACTOR_REPORT_TIME 5               //
+#define SPHACTOR_REPORT_FDSOCK 6             //
+#define SPHACTOR_REPORT_API 7                //
+
 //  Constructor, creates a new Sphactor_report instance.
 SPHACTOR_EXPORT sphactor_report_t *
     sphactor_report_new (void);

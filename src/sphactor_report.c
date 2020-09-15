@@ -24,7 +24,7 @@
 //  Structure of our class
 
 struct _sphactor_report_t {
-    int status;             //  Status, 0=INIT, 1=IDLE, 2=STOP, 3=DESTROY, 4=SOCK, 5=TIME
+    int status;             //  Status, constants in header, i.e. 0=INIT, 1=IDLE, 2=STOP, 3=DESTROY, 4=SOCK, 5=TIME, 6=FDSOCK, 7=API
     uint64_t iterations;    //  Number of iterations performed
     zosc_t *custom;         //  Optional custom OSC message
 };

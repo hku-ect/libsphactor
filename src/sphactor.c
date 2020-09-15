@@ -646,7 +646,7 @@ sphactor_test (bool verbose)
     zclock_sleep(100);
     sphactor_report_t *report = sphactor_report(reportact);
     assert( report );
-    assert( sphactor_report_status( report ) == 1 );
+    assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE );
     sphactor_report_destroy( &report );
     sphactor_destroy(&reportact);
 
