@@ -20,7 +20,13 @@
 */
 
 #include "sphactor_classes.h"
+#if defined(__WINDOWS__)
+//  Apparently in MSCV correct alignment of types is alread guaranteed
+#define _Atomic(T) struct { T __val; }
+#include <winnt.h>
+#else
 #include <stdatomic.h>
+#endif
 
 //  Structure of our class
 
@@ -257,7 +263,11 @@ void
 sphactor_actor_atomic_set_report( sphactor_actor_t *self, sphactor_report_t *report)
 {
     // swap the report pointer atomically
+#if defined(__WINDOWS__)
+    sphactor_report_t *prev = (sphactor_report_t *)InterlockedExchangePointer( &self->atomic_report, (void *)report);
+#else
     sphactor_report_t *prev = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)report);
+#endif
     // if prev is not NULL we need to destroy it
     if ( prev != (sphactor_report_t *)NULL )
     {
@@ -271,7 +281,11 @@ sphactor_report_t *
 sphactor_actor_atomic_report(sphactor_actor_t *self)
 {
     // swap the report pointer atomically with NULL
+#if defined(__WINDOWS__)
+    sphactor_report_t *report = (sphactor_report_t *)InterlockedExchangePointer( &self->atomic_report, (void *)NULL );
+#else
     sphactor_report_t *report = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)NULL );
+#endif
     // we now own report so the caller must destroy when finished with it
     // unless it's null of course
     return report;
