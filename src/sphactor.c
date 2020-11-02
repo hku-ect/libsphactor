@@ -35,7 +35,7 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
-    sphactor_actor_t *_sph_act  //  pointer to the actor in the thread, internal use only!
+    sphactor_actor_t *_sph_act; //  pointer to the actor in the thread, internal use only!
 };
 
 //  Hash table for the actor_type register of actors
