@@ -75,7 +75,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->iterations = 0;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
-    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
+    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( SPHACTOR_REPORT_INIT, self->iterations, NULL ) );
 #else
     atomic_store( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
 #endif
@@ -570,7 +570,6 @@ sphactor_actor_run (zsock_t *pipe, void *args)
     zsock_signal (self->pipe, 0);
     //  Signal handler we're initiated
     sphactor_event_t ev = { NULL, "INIT", self->name, zuuid_str(self->uuid), self };
-    sphactor_actor_atomic_set_report( self, sphactor_report_construct( SPHACTOR_REPORT_INIT, 0, NULL ));
     if ( self->handler)
     {
         zmsg_t *initretmsg = self->handler(&ev, self->handler_args);
