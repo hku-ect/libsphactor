@@ -156,7 +156,7 @@ SPHACTOR_EXPORT void
 //  status reports safely. For example this can be used to render a
 //  visual representation of the actor.
 SPHACTOR_EXPORT void
-    sphactor_ask_set_report (sphactor_t *self, bool on);
+    sphactor_ask_set_reporting (sphactor_t *self, bool on);
 
 //  Set the stage position of the actor.
 SPHACTOR_EXPORT void
@@ -178,8 +178,8 @@ SPHACTOR_EXPORT zconfig_t *
 SPHACTOR_EXPORT zconfig_t *
     sphactor_zconfig_append (sphactor_t *self, zconfig_t *root);
 
-//  Gets the current status report from the actor. A NULL pointer is
-//  returned if no report (reporting disabled) is found.
+//  Gets the current status report from the actor.
+//  A NULL pointer is returned if reporting is disabled.
 SPHACTOR_EXPORT sphactor_report_t *
     sphactor_report (sphactor_t *self);
 
