@@ -23,9 +23,6 @@
 //  Set up environment for the application
 
 //  External dependencies
-#ifndef CZMQ_BUILD_DRAFT_API
-#define CZMQ_BUILD_DRAFT_API
-#endif
 #include <czmq.h>
 
 //  SPHACTOR version macros for compile-time API detection
