@@ -35,7 +35,8 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
-    sphactor_actor_t *_sph_act; //  pointer to the actor in the thread, internal use only!
+    sphactor_report_t *latest_report;   //  The latest report acquired from the actor
+    sphactor_actor_t  *_sph_act;        //  pointer to the actor in the thread, internal use only!
 };
 
 //  Hash table for the actor_type register of actors
@@ -59,6 +60,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     sphactor_shim_t shim = { handler, args, uuid, name };
     self->actor = zactor_new( sphactor_actor_run, &shim);
+    self->latest_report = NULL;
     self->_sph_act = NULL;
     if (name)
     {
@@ -230,10 +232,10 @@ sphactor_ask_set_verbose (sphactor_t *self, bool on)
 }
 
 void
-sphactor_ask_set_report (sphactor_t *self, bool on)
+sphactor_ask_set_reporting (sphactor_t *self, bool on)
 {
     assert (self);
-    zstr_sendm (self->actor, "SET REPORT");
+    zstr_sendm (self->actor, "SET REPORTING");
     zstr_sendf( self->actor, on ? "TRUE" : "FALSE");
 }
 
@@ -315,9 +317,16 @@ sphactor_report(sphactor_t *self)
     }
     // swap the report pointer atomically with NULL
     sphactor_report_t *report = sphactor_actor_atomic_report( self->_sph_act );
+    // if we receive a NULL report this means there's no update in the status
+    // the latest report is then still valid.
+    if ( report == NULL ) return self->latest_report;
+    // we now save the report as the latest report and destroy the old one
+    // if the old one is not NULL
+    if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
+    self->latest_report = report;
     // we now own report so the caller must destroy when finished with it
     // unless it's null of course
-    return report;
+    return self->latest_report;
 }
 
 int
@@ -651,7 +660,6 @@ sphactor_test (bool verbose)
     // sphactor_report test
     sphactor_t *reportact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert(reportact);
-    zclock_sleep(100);
     sphactor_report_t *report = sphactor_report(reportact);
     assert( report );
     zsys_info("status = %i, should be %i", sphactor_report_status( report ), SPHACTOR_REPORT_IDLE );

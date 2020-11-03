@@ -119,7 +119,7 @@
         <argument name = "on" type = "boolean" />
     </method>
 
-    <method name = "ask set report">
+    <method name = "ask set reporting">
         Set the reporting of the actor. Reporting is used for communicating 
         status reports safely. For example this can be used to render a 
         visual representation of the actor.
@@ -155,8 +155,8 @@
     </method>
 
     <method name = "report">
-        Gets the current status report from the actor. A NULL pointer is 
-        returned if no report (reporting disabled) is found. 
+        Gets the current status report from the actor. 
+        A NULL pointer is returned if reporting is disabled. 
         <return type = "sphactor report" />
     </method>
 </class>
