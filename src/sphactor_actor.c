@@ -75,7 +75,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->iterations = 0;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
-    InterlockedExchange64( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
+    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
 #else
     atomic_store( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
 #endif
