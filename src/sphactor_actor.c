@@ -52,6 +52,7 @@ struct _sphactor_actor_t {
 //    sphactor_shim_t *shim;
     zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
     uint64_t    iterations;       //  number of iterations (cycles) performed
+    int         status;           //  sphactor_report_status constant, see sphactor_report.h
     _Atomic     (void*) atomic_report;  // atomic pointer to report data
 };
 
@@ -73,11 +74,12 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->timeout = -1;
     // initialise the status report
     self->iterations = 0;
+    self->status = SPHACTOR_REPORT_INIT;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
-    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( SPHACTOR_REPORT_INIT, self->iterations, NULL ) );
+    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
 #else
-    atomic_store( &self->atomic_report, sphactor_report_construct( 0, self->iterations, NULL ) );
+    atomic_store( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
 #endif
     if ( self->uuid == NULL)
     {
@@ -138,7 +140,10 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         sphactor_actor_t *self = *self_p;
 
         if ( self->reporting )
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_DESTROY, self->iterations, NULL));
+        {
+            self->status = SPHACTOR_REPORT_DESTROY;
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+        }
 
         // signal upstream we are destroying
         sphactor_event_t ev = { NULL, "DESTROY", self->name, zuuid_str(self->uuid), self };
@@ -232,6 +237,26 @@ sphactor_actor_disconnect (sphactor_actor_t *self, const char *dest)
     int rc = zsock_disconnect (self->sub, "%s", dest);
     assert ( rc == 0 );
     return 0;
+}
+
+//  Return our sphactor_actor's UUID string
+//
+//  Note: sphactor_actor methods can only be called from within its instance!
+zuuid_t *
+sphactor_actor_uuid (sphactor_actor_t *self)
+{
+    assert(self);
+    return self->uuid; // should we duplicate?
+}
+
+//  Return our sphactor_actor's name. First 6 characters of the UUID by default.
+//
+//  Note: sphactor_actor methods can only be called from within its instance!
+const char *
+sphactor_actor_name (sphactor_actor_t *self)
+{
+    assert(self);
+    return self->name;
 }
 
 void
@@ -551,6 +576,20 @@ sph_actor_lifecycle(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
+static zmsg_t *
+sph_actor_reportertest(sphactor_event_t *ev, void *args)
+{
+    if ( ev->actor->verbose )
+        zsys_info("%s: %s, %s", sphactor_actor_name( (sphactor_actor_t *)ev->actor), ev->name, ev->type);
+    if ( streq(ev->type, "TIME" ) )
+    {
+        // assure our status is TIME
+        assert( ev->actor->status == SPHACTOR_REPORT_TIME );
+        assert( ev->msg == NULL );
+    }
+    return NULL;
+}
+
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
 
@@ -598,8 +637,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             time_till_next = self->time_next - zclock_mono();
             // if time_till_next will be 0 the poller we return immediatelly
             // so we only set a report when that is not the case
+            self->status = SPHACTOR_REPORT_IDLE;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_IDLE, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
         }
 
 
@@ -613,8 +653,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
             if ( func ) {
                 //  update our status report 6=FDSOCK
+                self->status = SPHACTOR_REPORT_FDSOCK;
                 if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_FDSOCK, self->iterations, NULL));
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
 
                 zmsg_t * retmsg = func( (void * )fd );
                 if ( retmsg != NULL ) {
@@ -632,8 +673,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
         if (which == self->pipe)
         {
             //  update our status report 7=API
+            self->status = SPHACTOR_REPORT_API;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_API, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
             sphactor_actor_recv_api (self);
         }
         //  if a sub socket then process actor
@@ -645,8 +687,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             }
             // TODO: think this through
             //  update our status report 4=SOCK
+            self->status = SPHACTOR_REPORT_SOCK;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_SOCK, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
 
             sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
             zmsg_t *retmsg = self->handler(&ev, self->handler_args);
@@ -663,19 +706,24 @@ sphactor_actor_run (zsock_t *pipe, void *args)
         else if ( which == NULL ) {
             //  timed events don't carry a message instead NULL is passed
             //  update our status report 5=TIME
+            self->status = SPHACTOR_REPORT_TIME;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_TIME, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
 
-            sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
-            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-            if (retmsg)
+            // do we have a handler? TODO: we should never have a NULL handler???
+            if ( self->handler )
             {
-                // publish the msg
-                zmsg_send(&retmsg, self->pub);
+                sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
+                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+                if (retmsg)
+                {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
 
-                // delete message if we have no connections (otherwise it leaks)
-                if ( zsock_endpoint(self->pub) == NULL ) {
-                    zmsg_destroy(&retmsg);
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL ) {
+                        zmsg_destroy(&retmsg);
+                    }
                 }
             }
         }
@@ -703,8 +751,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
         ev.uuid = zuuid_str(self->uuid);
         ev.actor = self;
 
+        self->status = SPHACTOR_REPORT_STOP;
         if ( self->reporting )
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(SPHACTOR_REPORT_STOP, self->iterations, NULL));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
 
         zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
         if (destrretmsg) zmsg_destroy(&destrretmsg);
@@ -839,24 +888,43 @@ sphactor_actor_test (bool verbose)
     sphactor_shim_t lifecycle_tester = { &sph_actor_lifecycle, NULL, NULL, "lifecycle_tester" };
     zactor_t *sphactor_lifecycle_tester = zactor_new (sphactor_actor_run, &lifecycle_tester);
     assert(sphactor_lifecycle_tester);
-    // acquire a pointer to the running sphactor_actor instance
-    rc = zstr_send( sphactor_lifecycle_tester, "INSTANCE" );
-    assert( rc == 0);
-    sphactor_actor_t *lcact;
-    rc = zsock_recv (sphactor_lifecycle_tester, "p", &lcact);
-    assert( rc == 0 );
-    assert(lcact);
-    // stress test the internal acquiring of the report
-    for (int i=0; i<1000000;i++)
-    {
-        sphactor_report_t *r = sphactor_actor_atomic_report(lcact);
-        if (r)
-        {
-            zsys_info("status: %i", sphactor_report_status(r) );
-            sphactor_report_destroy(&r);
-        }
-    }
+    zclock_sleep(200);
     zactor_destroy( &sphactor_lifecycle_tester );
+
+    // reporting test
+    sphactor_shim_t report_tester = { &sph_actor_reportertest, NULL, NULL, "reporter_tester" };
+    zactor_t *sphactor_reportertest = zactor_new (sphactor_actor_run, &report_tester);
+    assert(sphactor_reportertest);
+    // acquire a pointer to the running sphactor_actor instance
+    rc = zstr_send( sphactor_reportertest, "INSTANCE" );
+    assert( rc == 0);
+    sphactor_actor_t *repact;
+    rc = zsock_recv (sphactor_reportertest, "p", &repact);
+    assert( rc == 0 );
+    assert(repact);
+    // set the timeout to 1ms
+    rc = zstr_sendm( sphactor_reportertest, "SET TIMEOUT" );
+    rc = zstr_sendf( sphactor_reportertest, "%li", 1 );
+    assert( rc == 0);
+    // stress test the internal acquiring of the report
+    for (int i=0; i<10;i++)
+    {
+        /*****
+         * This will show a a status of 1 (idle) and 5 (timed event)
+         * on my machine it tries about 30000 times before a new report
+         * is acquired. So about 33 nanoseconds per request.
+         */
+        sphactor_report_t *r = sphactor_actor_atomic_report(repact);
+        int count = 0;
+        while ( !r)
+        {
+            count++;
+            r = sphactor_actor_atomic_report(repact);
+        }
+        zsys_info("status: %i, iterations: %i, tried requests: %i", sphactor_report_status(r), sphactor_report_iterations(r), count );
+        sphactor_report_destroy(&r);
+    }
+    zactor_destroy( &sphactor_reportertest );
 
     // zpoller add / remove test
 
