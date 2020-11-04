@@ -91,14 +91,14 @@ configure_file("${PROJECT_BINARY_DIR}/platform.h.in" "${PROJECT_BINARY_DIR}/plat
 if (WIN32)
     #The MSVC C compiler is too out of date,
     #so the sources have to be compiled as c++
-    if (MSVC AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-        enable_language(CXX)
-        file(GLOB sources "${SOURCE_DIR}/src/*.c")
-        set_source_files_properties(
-            ${sources}
-            PROPERTIES LANGUAGE CXX
-        )
-    endif()
+    #if (MSVC AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+    #    enable_language(CXX)
+    #    file(GLOB sources "${SOURCE_DIR}/src/*.c")
+    #    set_source_files_properties(
+    #        ${sources}
+    #        PROPERTIES LANGUAGE CXX
+    #    )
+    #endif()
     set(MORE_LIBRARIES ws2_32 Rpcrt4 Iphlpapi)
 endif()
 
