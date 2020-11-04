@@ -173,6 +173,34 @@ sphactor_ask_set_actor_type (sphactor_t *self, const char *actor_type)
     zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
 
+//  Set the timeout of this Sphactor's actor. This is used for the timeout
+//  of the poller so the sphactor actor is looped for a fixed interval. Note
+//  that the sphactor's actor method receives a NULL message if it is
+//  triggered by timeout event as opposed to when triggered by a socket
+//  event. By default the timeout is -1 implying it never timeouts.
+void
+sphactor_ask_set_timeout (sphactor_t *self, int64_t timeout)
+{
+    assert (self);
+    assert (timeout);
+    zstr_sendm(self->actor, "SET TIMEOUT");
+    zstr_sendf(self->actor, "%li", timeout);
+}
+
+//  Return the current timeout of this sphactor actor's poller. By default
+//  the timeout is -1 which means it never times out but only triggers
+//  on socket events.
+int64_t
+sphactor_ask_timeout (sphactor_t *self)
+{
+    assert (self);
+    zstr_send(self->actor, "TIMEOUT");
+    zmsg_t *response = zmsg_recv( self->actor );
+    char *cmd = zmsg_popstr( response );
+    assert( strlen( cmd ) );
+    return atoll(cmd);
+}
+
 int
 sphactor_ask_connect (sphactor_t *self, const char *endpoint)
 {
@@ -228,7 +256,7 @@ sphactor_ask_set_verbose (sphactor_t *self, bool on)
 {
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
-    zstr_sendf( self->actor, on ? "TRUE" : "FALSE");
+    zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
 void
@@ -236,7 +264,7 @@ sphactor_ask_set_reporting (sphactor_t *self, bool on)
 {
     assert (self);
     zstr_sendm (self->actor, "SET REPORTING");
-    zstr_sendf( self->actor, on ? "TRUE" : "FALSE");
+    zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
 void
@@ -516,6 +544,9 @@ sphactor_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
+    //  test timeout setting and getting
+    sphactor_ask_set_timeout(self, 1000);
+    assert( sphactor_ask_timeout( self ) == 1000);
     sphactor_destroy (&self);
 
     //  Simple create/destroy/connect/disconnect test
