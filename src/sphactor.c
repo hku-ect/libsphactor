@@ -198,8 +198,9 @@ sphactor_ask_timeout (sphactor_t *self)
     zmsg_t *response = zmsg_recv( self->actor );
     char *cmd = zmsg_popstr( response );
     assert( strlen( cmd ) );
-    int64_t ret = atoll(cmd);
-    zstr_free(&cmd);
+    int64_t ret = atoll( cmd );
+    zmsg_destroy( &response );
+    zstr_free( &cmd );
     return ret;
 }
 
