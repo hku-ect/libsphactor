@@ -599,7 +599,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
     if ( !args )
     {
         // as a test for now
-        sphactor_shim_t consumer = { &sph_actor_consumer, NULL };
+        sphactor_shim_t consumer = { &sph_actor_consumer, NULL, NULL, NULL };
         args = (void *)&consumer;
     }
     sphactor_actor_t *self = sphactor_actor_new (pipe, args);

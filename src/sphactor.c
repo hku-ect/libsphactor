@@ -695,8 +695,11 @@ sphactor_test (bool verbose)
     assert(reportact);
     sphactor_report_t *report = sphactor_report(reportact);
     assert( report );
-    zsys_info("status = %i, should be %i", sphactor_report_status( report ), SPHACTOR_REPORT_IDLE );
-    assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE );
+    zsys_info("status = %i, should be %i or %i", sphactor_report_status( report ), SPHACTOR_REPORT_IDLE, SPHACTOR_REPORT_API );
+    //  the status is either IDLE or API since to retrieve the report a first time
+    //  the internal INSTANCE API command is used so in theory this can still
+    //  be the status when we retrieve the report!
+    assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE || sphactor_report_status( report ) == SPHACTOR_REPORT_API);
     sphactor_report_destroy( &report );
     sphactor_destroy(&reportact);
 
