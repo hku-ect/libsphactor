@@ -4,7 +4,7 @@
     Runs all selftests.
 
     -------------------------------------------------------------------------
-    Copyright (c) the Contributors as noted in the AUTHORS file.
+    Copyright (c) 2020 the Contributors as noted in the AUTHORS file.
 
     This file is part of Sphactor, an open-source framework for high level
     actor model concurrency --- http://sphactor.org
@@ -35,6 +35,7 @@ all_tests [] = {
 // Tests for stable public classes:
     { "sphactor", sphactor_test, true, true, NULL },
     { "sphactor_actor", sphactor_actor_test, true, true, NULL },
+    { "sphactor_report", sphactor_report_test, true, true, NULL },
     {NULL, NULL, 0, 0, NULL}          //  Sentinel
 };
 

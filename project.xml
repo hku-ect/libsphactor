@@ -14,6 +14,7 @@
 
     <class name = "sphactor" />
     <class name = "sphactor_actor" />
+    <class name = "sphactor_report" />
     <target name = "travis" />
     <target name = "vs2015" />
 </project>

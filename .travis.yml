@@ -97,6 +97,7 @@ pkg_deps_common: &pkg_deps_common
 # A newer dist==xenial completes the C++11 support with gcc-5+
 addons:
   apt:
+    sources: *pkg_src_zeromq_ubuntu16
     packages:
     - *pkg_deps_common
 
@@ -106,6 +107,7 @@ matrix:
     os: linux
     addons:
       apt:
+        sources: *pkg_src_zeromq_ubuntu16
         packages:
         - *pkg_deps_common
         - *pkg_deps_doctools
@@ -113,6 +115,7 @@ matrix:
     os: linux
     addons:
       apt:
+        sources: *pkg_src_zeromq_ubuntu16
         packages:
         - valgrind
         - *pkg_deps_common
@@ -120,6 +123,7 @@ matrix:
     os: linux
     addons:
       apt:
+        sources: *pkg_src_zeromq_ubuntu16
         packages:
         - *pkg_deps_common
   - env: BUILD_TYPE=cmake DO_CLANG_FORMAT_CHECK=1 CLANG_FORMAT=clang-format-5.0

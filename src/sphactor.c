@@ -35,6 +35,8 @@ struct _sphactor_t {
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
+    sphactor_report_t *latest_report;   //  The latest report acquired from the actor
+    sphactor_actor_t  *_sph_act;        //  pointer to the actor in the thread, internal use only!
 };
 
 //  Hash table for the actor_type register of actors
@@ -58,7 +60,8 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 
     sphactor_shim_t shim = { handler, args, uuid, name };
     self->actor = zactor_new( sphactor_actor_run, &shim);
-
+    self->latest_report = NULL;
+    self->_sph_act = NULL;
     if (name)
     {
         //self->name = strdup(name);
@@ -94,6 +97,7 @@ sphactor_destroy (sphactor_t **self_p)
         zstr_free( &self->name);
         if (self->uuid) zuuid_destroy(&self->uuid);
         zstr_free(&self->endpoint);
+        self->_sph_act = NULL;   //  we don't own the pointer!!
         //  Free object itself
 
         free (self);
@@ -169,6 +173,37 @@ sphactor_ask_set_actor_type (sphactor_t *self, const char *actor_type)
     zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
 
+//  Set the timeout of this Sphactor's actor. This is used for the timeout
+//  of the poller so the sphactor actor is looped for a fixed interval. Note
+//  that the sphactor's actor method receives a NULL message if it is
+//  triggered by timeout event as opposed to when triggered by a socket
+//  event. By default the timeout is -1 implying it never timeouts.
+void
+sphactor_ask_set_timeout (sphactor_t *self, int64_t timeout)
+{
+    assert (self);
+    assert (timeout);
+    zstr_sendm(self->actor, "SET TIMEOUT");
+    zstr_sendf(self->actor, "%li", timeout);
+}
+
+//  Return the current timeout of this sphactor actor's poller. By default
+//  the timeout is -1 which means it never times out but only triggers
+//  on socket events.
+int64_t
+sphactor_ask_timeout (sphactor_t *self)
+{
+    assert (self);
+    zstr_send(self->actor, "TIMEOUT");
+    zmsg_t *response = zmsg_recv( self->actor );
+    char *cmd = zmsg_popstr( response );
+    assert( strlen( cmd ) );
+    int64_t ret = atoll( cmd );
+    zmsg_destroy( &response );
+    zstr_free( &cmd );
+    return ret;
+}
+
 int
 sphactor_ask_connect (sphactor_t *self, const char *endpoint)
 {
@@ -224,7 +259,15 @@ sphactor_ask_set_verbose (sphactor_t *self, bool on)
 {
     assert (self);
     zstr_sendm (self->actor, "SET VERBOSE");
-    zstr_sendf( self->actor, "%d", on);
+    zstr_send( self->actor, on ? "TRUE" : "FALSE");
+}
+
+void
+sphactor_ask_set_reporting (sphactor_t *self, bool on)
+{
+    assert (self);
+    zstr_sendm (self->actor, "SET REPORTING");
+    zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
 void
@@ -284,6 +327,37 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zstr_free(&type);
     
     return curActor;
+}
+
+
+sphactor_report_t *
+sphactor_report(sphactor_t *self)
+{
+    if ( self->_sph_act == NULL )
+    {
+        int rc = zstr_send( self->actor, "INSTANCE" );
+        assert( rc == 0);
+
+        rc = zsock_recv (self->actor, "p", &self->_sph_act);
+        assert( rc == 0 );
+        if (  self->_sph_act == NULL )
+        {
+            zsys_error( "error requesting the instance pointer for the report" );
+            return NULL;
+        }
+    }
+    // swap the report pointer atomically with NULL
+    sphactor_report_t *report = sphactor_actor_atomic_report( self->_sph_act );
+    // if we receive a NULL report this means there's no update in the status
+    // the latest report is then still valid.
+    if ( report == NULL ) return self->latest_report;
+    // we now save the report as the latest report and destroy the old one
+    // if the old one is not NULL
+    if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
+    self->latest_report = report;
+    // we now own report so the caller must destroy when finished with it
+    // unless it's null of course
+    return self->latest_report;
 }
 
 int
@@ -473,6 +547,9 @@ sphactor_test (bool verbose)
     memcpy (name2, zuuid_str(uuid), 6);
     assert( streq ( name, name2 ));
     zstr_free(&name2);
+    //  test timeout setting and getting
+    sphactor_ask_set_timeout(self, 1000);
+    assert( sphactor_ask_timeout( self ) == 1000);
     sphactor_destroy (&self);
 
     //  Simple create/destroy/connect/disconnect test
@@ -613,6 +690,20 @@ sphactor_test (bool verbose)
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
     sphactor_destroy(&actor2);
+
+    // sphactor_report test
+    sphactor_t *reportact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    assert(reportact);
+    sphactor_report_t *report = sphactor_report(reportact);
+    assert( report );
+    zsys_info("status = %i, should be %i or %i", sphactor_report_status( report ), SPHACTOR_REPORT_IDLE, SPHACTOR_REPORT_API );
+    //  the status is either IDLE or API since to retrieve the report a first time
+    //  the internal INSTANCE API command is used so in theory this can still
+    //  be the status when we retrieve the report!
+    assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE || sphactor_report_status( report ) == SPHACTOR_REPORT_API);
+    sphactor_report_destroy( &report );
+    sphactor_destroy(&reportact);
+
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end
     printf ("OK\n");

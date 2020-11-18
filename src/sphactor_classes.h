@@ -1,7 +1,7 @@
 /*  =========================================================================
     sphactor_classes - private header file
 
-    Copyright (c) the Contributors as noted in the AUTHORS file.
+    Copyright (c) 2020 the Contributors as noted in the AUTHORS file.
 
     This file is part of Sphactor, an open-source framework for high level
     actor model concurrency --- http://sphactor.org
@@ -34,6 +34,8 @@
 
 //  External API
 #include "../include/libsphactor.h"
+
+//  Private external dependencies
 
 //  Opaque class structures to allow forward references
 

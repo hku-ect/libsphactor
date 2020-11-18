@@ -1,0 +1,58 @@
+<class name = "sphactor_report" state = "stable">
+
+    <constant name = "init"    value = "0" />
+    <constant name = "idle"    value = "1" />
+    <constant name = "stop"    value = "2" />
+    <constant name = "destroy" value = "3" />
+    <constant name = "sock"    value = "4" />
+    <constant name = "time"    value = "5" />
+    <constant name = "fdsock"  value = "6" />
+    <constant name = "api"     value = "7" />
+
+    <constructor>
+        Constructor, creates a new Sphactor_report instance. 
+    </constructor>
+
+    <constructor name = "construct">
+        Constructor, creates a new Sphactor_report instance with 
+        the given arguments.
+        <argument name = "status" type = "integer"optional = "1" />
+        <argument name = "iterations" type = "number" size="8" optional = "1" />
+        <argument name = "custom" type = "zosc" optional = "1" />
+    </constructor>
+
+    <destructor>
+        Destructor, destroys a Sphactor_report instance. 
+    </destructor>
+
+    <method name = "status">
+        return the status in the report
+        <return type = "integer" />
+    </method>
+
+    <method name = "iterations">
+        return the number of iterations in the report
+        <return type = "number" size = "8" />
+    </method>
+
+    <method name = "custom">
+        return the custom status as an OSC message
+        <return type = "zosc" />
+    </method>
+
+    <method name = "set status">
+        set the status in the report
+        <argument name = "status" type = "integer" />
+    </method>
+
+    <method name = "set iterations">
+        set the number of iterations in the report
+        <argument name = "iterations" type = "number" size = "8" />
+    </method>
+
+    <method name = "set custom">
+        set the custom status as an OSC message
+        <argument name = "message" type = "zosc" />
+    </method>
+
+</class>
