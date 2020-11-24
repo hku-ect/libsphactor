@@ -65,21 +65,28 @@ typedef struct _sphactor_event_t{
 typedef zmsg_t * (sphactor_handler_fn) (
     sphactor_event_t *event, void *arg);
 
+// Callback function to create actor instances
+typedef void * (sphactor_constructor_fn) (
+    void *arg);
+
 //  Constructor, creates a new Sphactor instance.
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new (sphactor_handler_fn handler, void *arg, const char *name, zuuid_t *uuid);
 
 //  Constructor, creates a new Sphactor instance by its typename.
 SPHACTOR_EXPORT sphactor_t *
-    sphactor_new_by_type (const char *actor_type, void *arg, const char *name, zuuid_t *uuid);
+    sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid);
 
 //  Destructor, destroys a Sphactor instance.
 SPHACTOR_EXPORT void
     sphactor_destroy (sphactor_t **self_p);
 
-//
+//  Register an actor type, this is used to dynamically create actors. It needs to know the
+//  handler method, a method for constructing the actor and the arguments to construct the
+//  actor.
+//  Returns 0 on success, -1 if already registered.
 SPHACTOR_EXPORT int
-    sphactor_register (const char *actor_type, sphactor_handler_fn handler);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg);
 
 //
 SPHACTOR_EXPORT int

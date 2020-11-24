@@ -22,7 +22,6 @@ save.xml
 
 # Executables
 src/libsphactor_selftest
-src/hello
 src/sphactor_selftest
 *.exe
 *.out
@@ -30,9 +29,9 @@ src/sphactor_selftest
 core
 
 # Distcheck workspace and archives
-libsphactor-*/
-libsphactor-*.tar.gz
-libsphactor-*.zip
+/libsphactor-*/
+/libsphactor-*.tar.gz
+/libsphactor-*.zip
 
 # Man pages
 doc/*.1
