@@ -144,7 +144,7 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         if ( self->reporting )
         {
             self->status = SPHACTOR_REPORT_DESTROY;
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
         }
 
         // signal upstream we are destroying
@@ -179,6 +179,8 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         sphactor_report_t *rep = sphactor_actor_atomic_report(self);
         if ( rep )
             sphactor_report_destroy(&rep);
+
+        zosc_destroy(&self->reportMsg);
 
         //  Free object itself
         free (self);
@@ -326,12 +328,10 @@ sphactor_actor_atomic_report(sphactor_actor_t *self)
 // Stores an osc message that becomes the report_custom
 void sphactor_actor_set_custom_report_data(sphactor_actor_t *self, zosc_t* message )
 {
-    if ( message == NULL ) {
-        if ( self->reportMsg != NULL ) {
-            zosc_destroy(&self->reportMsg);
-        }
-    }
+    zosc_t *prev = self->reportMsg;
     self->reportMsg = message;
+    if ( prev != NULL)
+        zosc_destroy(&prev);
 }
 
 //  Here we handle incoming (API) messages from the pipe from the controller (main thread)
