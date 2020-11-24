@@ -53,6 +53,7 @@ struct _sphactor_actor_t {
     zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
     uint64_t    iterations;       //  number of iterations (cycles) performed
     int         status;           //  sphactor_report_status constant, see sphactor_report.h
+    zosc_t      *reportMsg;
     _Atomic     (void*) atomic_report;  // atomic pointer to report data
 };
 
@@ -75,6 +76,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     // initialise the status report
     self->iterations = 0;
     self->status = SPHACTOR_REPORT_INIT;
+    self->reportMsg = NULL;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
     InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
@@ -296,6 +298,7 @@ sphactor_actor_atomic_set_report( sphactor_actor_t *self, sphactor_report_t *rep
 #else
     sphactor_report_t *prev = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)report);
 #endif
+    
     // if prev is not NULL we need to destroy it
     if ( prev != (sphactor_report_t *)NULL )
     {
@@ -318,6 +321,17 @@ sphactor_actor_atomic_report(sphactor_actor_t *self)
     // we now own report so the caller must destroy when finished with it
     // unless it's null of course
     return report;
+}
+
+// Stores an osc message that becomes the report_custom
+void sphactor_actor_set_custom_report_data(sphactor_actor_t *self, zosc_t* message )
+{
+    if ( message == NULL ) {
+        if ( self->reportMsg != NULL ) {
+            zosc_destroy(&self->reportMsg);
+        }
+    }
+    self->reportMsg = message;
 }
 
 //  Here we handle incoming (API) messages from the pipe from the controller (main thread)
@@ -639,7 +653,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             // so we only set a report when that is not the case
             self->status = SPHACTOR_REPORT_IDLE;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
         }
 
 
@@ -655,7 +669,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 //  update our status report 6=FDSOCK
                 self->status = SPHACTOR_REPORT_FDSOCK;
                 if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
                 zmsg_t * retmsg = func( (void * )fd );
                 if ( retmsg != NULL ) {
@@ -675,7 +689,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             //  update our status report 7=API
             self->status = SPHACTOR_REPORT_API;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
             sphactor_actor_recv_api (self);
         }
         //  if a sub socket then process actor
@@ -689,7 +703,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             //  update our status report 4=SOCK
             self->status = SPHACTOR_REPORT_SOCK;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
             sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
             zmsg_t *retmsg = self->handler(&ev, self->handler_args);
@@ -708,7 +722,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             //  update our status report 5=TIME
             self->status = SPHACTOR_REPORT_TIME;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
             // do we have a handler? TODO: we should never have a NULL handler???
             if ( self->handler )
@@ -753,7 +767,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
         self->status = SPHACTOR_REPORT_STOP;
         if ( self->reporting )
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, NULL));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
         zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
         if (destrretmsg) zmsg_destroy(&destrretmsg);

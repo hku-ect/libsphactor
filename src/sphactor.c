@@ -477,6 +477,46 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
 }
 
 static zmsg_t *
+hello_report(sphactor_event_t *ev, void *args)
+{
+    if ( ev->msg == NULL ) return NULL;
+    assert(ev->msg);
+    
+    // check if this is a report request, or a
+    //  just echo what we receive
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Received from %s message: %s", ev->name, cmd);
+    
+    if ( streq(cmd, "CLEAR")) {
+        // clear our internal message
+        sphactor_actor_set_custom_report_data(ev->actor, NULL);
+    }
+    else {
+        // Generate custom osc message for report
+        char* msgBuffer = (char*) zmalloc(64);
+        memcpy (msgBuffer, cmd, strlen(cmd));
+        zosc_t * oscMsg = zosc_create("/message", "s", msgBuffer);
+        assert(oscMsg);
+        
+        //TODO: Need to be able to set msg on actor instance
+        sphactor_actor_set_custom_report_data(ev->actor, oscMsg);
+    }
+    
+    zstr_free(&cmd);
+    
+    // if there are strings left publish them
+    if ( zmsg_size(ev->msg) > 0 )
+    {
+        return ev->msg;
+    }
+    else
+    {
+        zmsg_destroy(&ev->msg);
+    }
+    return NULL;
+}
+
+static zmsg_t *
 spawn_sphactor(sphactor_event_t *ev, void *args)
 {
     if ( ev->msg == NULL ) return NULL;
@@ -690,7 +730,69 @@ sphactor_test (bool verbose)
     zconfig_destroy(&config);
     sphactor_destroy(&actor1);
     sphactor_destroy(&actor2);
-
+    
+    ///
+    /// Report test
+    ///
+    {
+        // Create two actors from the same function
+        sphactor_t *sender = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+        sphactor_t *reporter = sphactor_new ( hello_report, NULL, NULL, NULL);
+        assert(sender);
+        assert(reporter);
+        
+        // Connect them
+        sphactor_ask_connect(sender, sphactor_ask_endpoint(reporter));
+        sphactor_ask_connect(reporter, sphactor_ask_endpoint(sender));
+        
+        // Have them send a message to each other
+        const char* msg12 = "1 talking to 2";
+        zstr_sendm(sender->actor, "SEND");
+        zstr_send(sender->actor, msg12);
+        
+        zclock_sleep(100);
+        
+        // Wait for the actor to be idle
+        zsys_info("Requesting Report");
+        sphactor_report_t *report = sphactor_report(reporter);
+        assert(report);
+        
+        // read report status & message
+        int reportStatus = sphactor_report_status(report);
+        zosc_t* oscMsg = sphactor_report_custom(report);
+        assert(oscMsg);
+        
+        const char* txt;
+        int rc = zosc_retr(oscMsg, "s", &txt);
+        if ( rc == 0 ) {
+            assert(streq(txt, msg12));
+            zsys_info("Received report message matches sent message (%s)", txt);
+        }
+        
+        // Send a message to clear the report
+        zstr_sendm(sender->actor, "SEND");
+        zstr_send(sender->actor, "CLEAR");
+        
+        zclock_sleep(100);
+        
+        // read report, and confirm message is NULL
+        sphactor_report_t *report2 = sphactor_report(reporter);
+        assert(report2);
+        zosc_t* oscMsg2 = sphactor_report_custom(report2);
+        assert(oscMsg2 == NULL);
+        
+        zsys_info("Confirmed received message was null");
+        
+        // Clean Up
+        zclock_sleep(10); //  give some time for the test to complete, since it's threaded
+        
+        sphactor_destroy (&sender);
+        sphactor_destroy (&reporter);
+    }
+    ///
+    /// END
+    ///
+    
     // sphactor_report test
     sphactor_t *reportact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert(reportact);
@@ -701,7 +803,14 @@ sphactor_test (bool verbose)
     //  the internal INSTANCE API command is used so in theory this can still
     //  be the status when we retrieve the report!
     assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE || sphactor_report_status( report ) == SPHACTOR_REPORT_API);
-    sphactor_report_destroy( &report );
+    
+    zclock_sleep(10);
+    
+    report = sphactor_report(reportact);
+    assert( report );
+    
+    zclock_sleep(10);
+    
     sphactor_destroy(&reportact);
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
