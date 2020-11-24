@@ -93,5 +93,11 @@
         to enable the controlling thread to get this actor's status.
         <return type = "sphactor report" />  
     </method>
+    
+    <method name = "set custom report data">
+        Sets the actor's osc message for future reports. Use this in
+        handler functions to store data for use in rendering gui.
+        <argument name = "message" type = "zosc" />
+    </method>
 
 </class>
