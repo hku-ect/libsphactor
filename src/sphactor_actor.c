@@ -767,7 +767,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
         self->status = SPHACTOR_REPORT_STOP;
         if ( self->reporting )
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, self->reportMsg == NULL ? NULL : zosc_dup(self->reportMsg)));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
         zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
         if (destrretmsg) zmsg_destroy(&destrretmsg);
