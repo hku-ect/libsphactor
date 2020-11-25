@@ -378,7 +378,6 @@ sphactor_report(sphactor_t *self)
 int
 sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args)
 {
-    assert(handler);
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
     char *item = (char*)zhash_lookup(actors_reg, actor_type);
     if ( item != NULL )
@@ -511,7 +510,7 @@ regtest_constructor(void *args) {
     regtest_actor *inst = (regtest_actor *) zmalloc (sizeof (regtest_actor));
     assert(inst);
     zsys_info("regtest_constructor: ");
-    inst->name = (char *)args; // not sure we this is safe, should we strdup? It works for the test?
+    inst->name = strdup((char *)args);  // we're dupping because windows would otherwise fail?
     return inst;
 }
 
@@ -524,7 +523,7 @@ regtest_handler( sphactor_event_t *ev, void* args)
     zsys_info("regtest_actor name: %s", inst->name);
     if ( streq( ev->type, "DESTROY" ) )
     {
-        // zstr_free( &inst->name ); // not needed as the string is on the stack
+        zstr_free( &inst->name );
         free( inst );
         inst = NULL;
     }
@@ -619,7 +618,7 @@ sphactor_test (bool verbose)
     assert(item->constructor == regtest_constructor );
     // run constructor
     regtest_actor *instance = (regtest_actor *)item->constructor(item->constructor_args);
-    assert( instance->name == "test" );
+    assert( streq(instance->name, "test" ) );
     // start actor
     sphactor_t *regtestactor = sphactor_new(item->handler, (void *)instance, NULL, NULL);
     // actor will display event msgs
