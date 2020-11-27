@@ -7,9 +7,21 @@
         <return type = "zmsg" />
     </callback_type>
 
+    <callback_type name = "constructor_fn">
+        Callback function to create actor instances
+        <argument name = "arg" type = "anything" />
+        <return type = "anything" />
+    </callback_type>
+
     <method name = "register" singleton = "1">
+        Register an actor type, this is used to dynamically create actors. It needs to know the
+        handler method, a method for constructing the actor and the arguments to construct the
+        actor. 
+        Returns 0 on success, -1 if already registered.
         <argument name = "actor_type" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
+        <argument name = "constructor" type = "sphactor_constructor_fn" callback = "1"/>
+        <argument name = "constructor_arg" type = "anything" />
         <return type = "integer"/>
     </method>
     
@@ -37,7 +49,6 @@
     <constructor name = "new_by_type">
         Constructor, creates a new Sphactor instance by its typename. 
         <argument name = "actor_type" type = "string" />
-        <argument name = "arg" type = "anything" optional = "1" />
         <argument name = "name" type = "string" optional = "1" />
         <argument name = "uuid" type = "zuuid" optional = "1" />
     </constructor>
