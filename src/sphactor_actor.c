@@ -515,6 +515,9 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
     {
         // we don't know this command so let's pass it to the actor
         zsys_debug( "unkown command '%s', passing it to the actor handler", command);
+        // prepend the command string to the message
+        int rc = zmsg_pushstr(request, command);
+        assert(rc == 0);
         sphactor_event_t ev = { request, "API", self->name, zuuid_str(self->uuid), self };
         zmsg_t *retmsg = self->handler(&ev, self->handler_args);
         if (retmsg)
@@ -522,6 +525,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
             // return it over the pipe to our front
             zmsg_send(&retmsg, self->pipe);
         }
+        return; // as we cannot destroy the message!
     }
     zstr_free (&command);
     zmsg_destroy (&request);

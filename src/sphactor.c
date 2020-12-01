@@ -540,6 +540,22 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
+static zmsg_t *
+api_sphactor(sphactor_event_t *ev, void *args)
+{
+    if ( ev->msg == NULL ) return NULL;
+    assert(ev->msg);
+    //  just echo what we receive
+    char *cmd = zmsg_popstr(ev->msg);
+    zsys_info("Api actor %s says: %s", ev->name, cmd);
+    assert( streq(cmd, "TESTAPI") );
+    while( zmsg_size(ev->msg) )
+    {
+        zsys_info("Api actor %s also says: %s", ev->name, zmsg_popstr(ev->msg));
+    }
+    zmsg_destroy(&ev->msg);
+    return NULL;
+}
 
 typedef struct {
     char * name;
@@ -941,6 +957,13 @@ sphactor_test (bool verbose)
     assert(cap2);
     sphactor_destroy(&capact2);
 
+    // sphactor custom api test
+    sphactor_t *apiact = sphactor_new ( api_sphactor, NULL, NULL, NULL);
+    assert(apiact);
+    // trigger custom api
+    zsock_send( sphactor_socket(apiact), "si", "TESTAPI", 123 );
+    zclock_sleep(10);
+    sphactor_destroy(&apiact);
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end
