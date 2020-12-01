@@ -88,6 +88,16 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_actor_poller_remove (sphactor_actor_t *self, void *fd);
 
+//  Return the capability of the actor as a zconfig instance.
+SPHACTOR_EXPORT const zconfig_t *
+    sphactor_actor_capability (sphactor_actor_t *self);
+
+//  Set the capability of the actor as a zconfig instance. This should
+//  only be done on init and can only be done once!
+//  Returns 0 on success, -1 if capability is already set.
+SPHACTOR_EXPORT int
+    sphactor_actor_set_capability (sphactor_actor_t *self, zconfig_t *capability);
+
 //  Sets the status report. This is a very specific threadsafe lockfree method
 //  to enable the controlling thread to get this actor's status.
 SPHACTOR_EXPORT void
@@ -97,6 +107,11 @@ SPHACTOR_EXPORT void
 //  to enable the controlling thread to get this actor's status.
 SPHACTOR_EXPORT sphactor_report_t *
     sphactor_actor_atomic_report (sphactor_actor_t *self);
+
+//  Sets the actor's osc message for future reports. Use this in
+//  handler functions to store data for use in rendering gui.
+SPHACTOR_EXPORT void
+    sphactor_actor_set_custom_report_data (sphactor_actor_t *self, zosc_t *message);
 
 //  Self test of this class.
 SPHACTOR_EXPORT void

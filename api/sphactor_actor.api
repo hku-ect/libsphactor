@@ -82,6 +82,19 @@
         <return type = "integer" />
     </method>
 
+    <method name = "capability">
+        Return the capability of the actor as a zconfig instance.
+        <return type = "zconfig" mutable = "0" />
+    </method>
+
+    <method name = "set capability">
+        Set the capability of the actor as a zconfig instance. This should
+        only be done on init and can only be done once!
+        Returns 0 on success, -1 if capability is already set.
+        <argument name = "capability" type = "zconfig" />
+        <return type = "integer" />
+    </method>
+
     <method name = "atomic set report">
         Sets the status report. This is a very specific threadsafe lockfree method 
         to enable the controlling thread to get this actor's status.
