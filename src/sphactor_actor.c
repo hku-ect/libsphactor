@@ -511,9 +511,17 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
     if (streq (command, "$TERM"))
         //  The $TERM command is send by zactor_destroy() method
         self->terminated = true;
-    else {
-        zsys_error ("invalid command '%s'", command);
-        assert (false);
+    else
+    {
+        // we don't know this command so let's pass it to the actor
+        zsys_debug( "unkown command '%s', passing it to the actor handler", command);
+        sphactor_event_t ev = { request, "API", self->name, zuuid_str(self->uuid), self };
+        zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+        if (retmsg)
+        {
+            // return it over the pipe to our front
+            zmsg_send(&retmsg, self->pipe);
+        }
     }
     zstr_free (&command);
     zmsg_destroy (&request);
