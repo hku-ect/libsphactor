@@ -285,6 +285,18 @@ sphactor_ask_set_reporting (sphactor_t *self, bool on)
     zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
+zconfig_t *
+sphactor_ask_capability (sphactor_t *self)
+{
+    assert(self);
+    int rc = zstr_send (self->actor, "CAPABILITY");
+    assert( rc == 0);
+    zconfig_t *capconf = NULL;
+    rc = zsock_recv( self->actor, "p", &capconf);
+    assert( rc == 0 );
+    return capconf;
+}
+
 void
 sphactor_set_position (sphactor_t *self, int x, int y)
 {
@@ -479,9 +491,37 @@ hello_sphactor(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
+static char *capability_string =
+                          "capabilities\n"
+                          "    data\n"
+                          "        name = \"rate\"\n"
+                          "        type = \"int\"\n"
+                          "        value = \"60\"\n"
+                          "        min = \"1\"\n"
+                          "        max = \"1000\"\n"
+                          "        step = \"1\"\n"
+                          "    data\n"
+                          "        name = \"someFloat\"\n"
+                          "        type = \"float\"\n"
+                          "        value = \"1.0\"\n"
+                          "        min = \"0\"\n"
+                          "        max = \"10\"\n"
+                          "        step = \"0\"\n"
+                          "    data\n"
+                          "        name = \"someText\"\n"
+                          "        type = \"string\"\n"
+                          "        value = \"Hello world!\"\n"
+                          "        max = \"64\"\n";
+
 static zmsg_t *
 hello_sphactor2(sphactor_event_t *ev, void *args)
 {
+    if ( streq( ev->type, "INIT" ) )
+    {
+
+        int rc = sphactor_actor_set_capability(ev->actor, zconfig_str_load(capability_string));
+        assert(rc == 0);
+    }
     if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
     // just echo what we receive
@@ -884,6 +924,23 @@ sphactor_test (bool verbose)
     
     zclock_sleep(10);
     sphactor_destroy(&reportact);
+
+    // sphactor capability test
+    sphactor_t *capact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
+    assert(capact);
+    zconfig_t *cap = sphactor_ask_capability(capact);
+    // by default the capability is a null pointer
+    assert(cap == NULL);
+    sphactor_destroy(&capact);
+
+    // sphactor capability test
+    sphactor_t *capact2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
+    assert(capact2);
+    zconfig_t *cap2 = sphactor_ask_capability(capact2);
+    // by default the capability is a null pointer
+    assert(cap2);
+    sphactor_destroy(&capact2);
+
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end

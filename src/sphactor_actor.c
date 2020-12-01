@@ -53,7 +53,8 @@ struct _sphactor_actor_t {
     zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
     uint64_t    iterations;       //  number of iterations (cycles) performed
     int         status;           //  sphactor_report_status constant, see sphactor_report.h
-    zosc_t      *reportMsg;
+    zconfig_t   *capability;      //  The capability zconfig describing parameters (ie. for generating UI)
+    zosc_t      *reportMsg;       //  the report message containing the actor's state
     _Atomic     (void*) atomic_report;  // atomic pointer to report data
 };
 
@@ -73,6 +74,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->uuid = shim->uuid;
     self->actor_type = NULL;
     self->timeout = -1;
+    self->capability = NULL;
     // initialise the status report
     self->iterations = 0;
     self->status = SPHACTOR_REPORT_INIT;
@@ -175,6 +177,10 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         zhash_destroy(&self->subs);
 
         zhashx_destroy(&self->fd_handlers);
+        if (self->capability)
+        {
+            zconfig_destroy(&self->capability);
+        }
         // free the atomic report
         sphactor_report_t *rep = sphactor_actor_atomic_report(self);
         if ( rep )
@@ -289,6 +295,23 @@ sphactor_actor_poller_remove (sphactor_actor_t *self, void * fd)
     zhashx_delete(self->fd_handlers, fd);
     assert (rc == 0);
     return rc;
+}
+
+const zconfig_t *
+sphactor_actor_capability (sphactor_actor_t *self)
+{
+    assert( self );
+    return self->capability;
+}
+
+int
+sphactor_actor_set_capability (sphactor_actor_t *self, zconfig_t *capability)
+{
+    assert(self);
+    assert(capability);
+    if (self->capability) return -1;
+    self->capability = capability;
+    return 0;
 }
 
 void
@@ -477,6 +500,13 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
     else
     if (streq (command, "TIMEOUT"))
         zstr_sendf(self->pipe, "%li", self->timeout);
+    else
+    if (streq (command, "CAPABILITY"))
+    {
+        //  we're sending the raw pointer as it is readonly!
+        int rc = zsock_send(self->pipe, "p", self->capability);
+        assert(rc == 0);
+    }
     else
     if (streq (command, "$TERM"))
         //  The $TERM command is send by zactor_destroy() method

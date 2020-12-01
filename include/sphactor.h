@@ -165,6 +165,11 @@ SPHACTOR_EXPORT void
 SPHACTOR_EXPORT void
     sphactor_ask_set_reporting (sphactor_t *self, bool on);
 
+//  Request the actor's capability. This consists of a zconfig string
+//  containing its capability parameters.
+SPHACTOR_EXPORT zconfig_t *
+    sphactor_ask_capability (sphactor_t *self);
+
 //  Set the stage position of the actor.
 SPHACTOR_EXPORT void
     sphactor_set_position (sphactor_t *self, int x, int y);

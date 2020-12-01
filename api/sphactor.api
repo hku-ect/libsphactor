@@ -137,6 +137,12 @@
         <argument name = "on" type = "boolean" />
     </method>
 
+    <method name = "ask capability">
+        Request the actor's capability. This consists of a zconfig string 
+        containing its capability parameters.
+        <return type = "zconfig" />
+    </method>
+    
     <method name = "set position">
         Set the stage position of the actor.
         <argument name = "x" type = "integer" />
