@@ -518,6 +518,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         // prepend the command string to the message
         int rc = zmsg_pushstr(request, command);
         assert(rc == 0);
+        zstr_free(&command);
         sphactor_event_t ev = { request, "API", self->name, zuuid_str(self->uuid), self };
         zmsg_t *retmsg = self->handler(&ev, self->handler_args);
         if (retmsg)

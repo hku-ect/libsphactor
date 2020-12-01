@@ -551,8 +551,11 @@ api_sphactor(sphactor_event_t *ev, void *args)
     assert( streq(cmd, "TESTAPI") );
     while( zmsg_size(ev->msg) )
     {
-        zsys_info("Api actor %s also says: %s", ev->name, zmsg_popstr(ev->msg));
+        char *tmp = zmsg_popstr(ev->msg);
+        zsys_info("Api actor %s also says: %s", ev->name, tmp);
+        zstr_free(&tmp);
     }
+    zstr_free(&cmd);
     zmsg_destroy(&ev->msg);
     return NULL;
 }
@@ -784,7 +787,7 @@ sphactor_test (bool verbose)
     //assert(rc==0);
     
     //TODO: Set this variable from an environment variable
-    int limit = 250;
+    int limit = 2;
     char *limitStr = getenv("SPHACTOR_SOCKET_LIMIT");
     if ( limitStr != NULL ) {
         limit = atoi(limitStr);
