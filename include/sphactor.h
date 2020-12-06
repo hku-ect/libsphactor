@@ -29,19 +29,31 @@ sphactor_member_handler(sphactor_event_t *ev, void *args)
 };
 
 template<class SphactorClass>
-SPHACTOR_EXPORT sphactor_t *
-sphactor_new ( SphactorClass *inst, const char *name=nullptr, zuuid_t *uuid=nullptr )
+SPHACTOR_EXPORT static void *
+sphactor_cpp_constructor(void *arg)
 {
-    assert(inst);
-    return sphactor_new(sphactor_member_handler<SphactorClass>, inst, name, uuid);
+    return new SphactorClass();
+};
+
+template<class SphactorClass>
+SPHACTOR_EXPORT static void *
+sphactor_cpp_arg_constructor(void *arg)
+{
+    return new SphactorClass(arg);
+};
+
+template<class SphactorClass>
+SPHACTOR_EXPORT int
+sphactor_register (const char *actor_type)
+{
+    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_constructor<SphactorClass>, NULL);
 }
 
-// void pointer to a costructor
 template<class SphactorClass>
-SPHACTOR_EXPORT void *
-sphactoractor_constructor()
+SPHACTOR_EXPORT int
+sphactor_register (const char *actor_type, void *constructor_arg)
 {
-    return new SphactorClass;
+    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_arg_constructor<SphactorClass>, constructor_arg);
 }
 
 extern "C" {
