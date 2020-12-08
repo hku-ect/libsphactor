@@ -1,11 +1,5 @@
 <class name = "sphactor_actor" state = "stable">
 
-    <callback_type name = "handler_fn">
-        Callback function for custom file descriptor handling
-        <argument name = "fd" type = "anything" />
-        <return type = "zmsg" />
-    </callback_type>
-
     <constructor>
         Constructor, creates a new Sphactor_actor instance. 
         <argument name = "pipe" type = "zsock"  />
@@ -69,8 +63,7 @@
         Adds a file descriptor to our poller (wraps zpoller_add).
 
         Note: sphactor_actor methods can only be called from within its instance!
-        <argument name = "fd" type = "anything" />
-        <argument name = "handler" type = "sphactor_actor_handler_fn" callback = "1"/>
+        <argument name = "sockfd" type = "sockish" />
         <return type = "integer" />
     </method>
 
@@ -78,7 +71,7 @@
         Removes a file descriptor from our poller (wraps zpoller_remove).
 
         Note: sphactor_actor methods can only be called from within its instance!
-        <argument name = "fd" type = "anything" />
+        <argument name = "sockfd" type = "sockish" />
         <return type = "integer" />
     </method>
 

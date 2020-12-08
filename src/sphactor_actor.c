@@ -49,8 +49,6 @@ struct _sphactor_actor_t {
     int64_t     time_next;        //  timestamp for our next iteration
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
-//    sphactor_shim_t *shim;
-    zhashx_t    *fd_handlers;     //  a list of handlers for external fd's
     uint64_t    iterations;       //  number of iterations (cycles) performed
     int         status;           //  sphactor_report_status constant, see sphactor_report.h
     zconfig_t   *capability;      //  The capability zconfig describing parameters (ie. for generating UI)
@@ -127,8 +125,6 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     rc = zpoller_add(self->poller, self->sub);
     assert ( rc == 0 );
 
-    self->fd_handlers = zhashx_new();
-
     return self;
 }
 
@@ -176,7 +172,6 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         }
         zhash_destroy(&self->subs);
 
-        zhashx_destroy(&self->fd_handlers);
         if (self->capability)
         {
             zconfig_destroy(&self->capability);
@@ -278,22 +273,21 @@ sphactor_actor_set_timeout (sphactor_actor_t *self, int64_t timeout)
 }
 
 int
-sphactor_actor_poller_add (sphactor_actor_t *self, void * fd, sphactor_actor_handler_fn * handler)
+sphactor_actor_poller_add (sphactor_actor_t *self, void *sockfd)
 {
     assert(self);
-    int rc = zpoller_add(self->poller, fd);
-    zhashx_insert(self->fd_handlers, fd, (void*)handler);
-    assert (rc == 0);
+    assert(sockfd);
+    int rc = zpoller_add(self->poller, sockfd);
+    assert(rc == 0);
     return rc;
 }
 
 int
-sphactor_actor_poller_remove (sphactor_actor_t *self, void * fd)
+sphactor_actor_poller_remove (sphactor_actor_t *self, void * sockfd)
 {
     assert(self);
-    int rc = zpoller_remove(self->poller, fd);
-    zhashx_delete(self->fd_handlers, fd);
-    assert (rc == 0);
+    assert(sockfd);
+    int rc = zpoller_remove(self->poller, sockfd);
     return rc;
 }
 
@@ -647,6 +641,63 @@ sph_actor_reportertest(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
+static zmsg_t *
+sph_actor_pollertest(sphactor_event_t *ev, void *args)
+{
+    static zsock_t *pollerrecv = NULL;
+    assert( ev );
+    if ( streq(ev->type, "INIT" ) )
+    {
+        pollerrecv = zsock_new_pair(">inproc://testpoller");
+        sphactor_actor_poller_add(ev->actor, pollerrecv);
+        return NULL;
+    }
+    else
+    if ( streq(ev->type, "FDSOCK" ) )
+    {
+        assert(ev->msg);
+        zframe_t *frame = zmsg_pop(ev->msg);
+        if (zframe_size(frame) == sizeof( void *) )
+        {
+            void *p = *(void **)zframe_data(frame);
+            zsock_t *sock = zsock_resolve( p );
+            if ( sock )
+            {
+                char *msg = zstr_recv(sock);
+                assert(msg);
+                assert(streq(msg, "PING"));
+                zstr_free(&msg);
+            }
+        }
+        else
+            zsys_error("args is not a zsock instance");
+        zmsg_destroy(&ev->msg);
+        zframe_destroy(&frame);
+        return NULL;
+    }
+    else
+    if ( streq(ev->type, "DESTROY" ) )
+    {
+        zsock_destroy(&pollerrecv);
+    }
+
+    if ( ev->msg )
+    {
+        char *cmd = zmsg_popstr( ev->msg );
+        assert( streq(cmd, "PING") );
+        zstr_free(&cmd);
+        if ( zmsg_size(ev->msg) > 0 )
+        {
+            return ev->msg;
+        }
+        else
+        {
+            zmsg_destroy(&ev->msg);
+        }
+    }
+    return NULL;
+}
+
 //  --------------------------------------------------------------------------
 //  This is the actor which runs in its own thread.
 
@@ -706,15 +757,14 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
         if ( which != NULL && !zsock_is(which) ) {
             int * fd = (int*)which;
-            sphactor_actor_handler_fn * func = zhashx_lookup(self->fd_handlers, fd);
-
+            /* Obsolete
             if ( func ) {
                 //  update our status report 6=FDSOCK
                 self->status = SPHACTOR_REPORT_FDSOCK;
                 if ( self->reporting )
                     sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
-                zmsg_t * retmsg = func( (void * )fd );
+                zmsg_t * retmsg = func( self, (zsock_t * )fd, NULL ); // this won't work. Just here to make the compiler happy
                 if ( retmsg != NULL ) {
                     // publish the msg
                     zmsg_send(&retmsg, self->pub);
@@ -724,42 +774,9 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                         zmsg_destroy(&retmsg);
                     }
                 }
-            } //else???
+            } //else??? */
         }
-        else
-        if (which == self->pipe)
-        {
-            //  update our status report 7=API
-            self->status = SPHACTOR_REPORT_API;
-            if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
-            sphactor_actor_recv_api (self);
-        }
-        //  if a sub socket then process actor
-        else if ( which == self->sub ) {
-            zmsg_t *msg = zmsg_recv(which);
-            if (!msg)
-            {
-                break; //  interrupted
-            }
-            // TODO: think this through
-            //  update our status report 4=SOCK
-            self->status = SPHACTOR_REPORT_SOCK;
-            if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
 
-            sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
-            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-            if (retmsg)
-            {
-                // publish the msg
-                zmsg_send(&retmsg, self->pub);
-
-                // delete message if we have no connections (otherwise it leaks)
-                if ( zsock_endpoint(self->pub) == NULL )
-                    zmsg_destroy(&retmsg);
-            }
-        }
         else if ( which == NULL ) {
             //  timed events don't carry a message instead NULL is passed
             //  update our status report 5=TIME
@@ -781,6 +798,64 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                     if ( zsock_endpoint(self->pub) == NULL ) {
                         zmsg_destroy(&retmsg);
                     }
+                }
+            }
+        }
+        else if ( zsock_is(which) )
+        {
+            if (which == self->pipe)
+            {
+                //  update our status report 7=API
+                self->status = SPHACTOR_REPORT_API;
+                if ( self->reporting )
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                sphactor_actor_recv_api (self);
+            }
+            //  if a sub socket then process actor
+            else if ( which == self->sub ) {
+                zmsg_t *msg = zmsg_recv(which);
+                if (!msg)
+                {
+                    break; //  interrupted
+                }
+                // TODO: think this through
+                //  update our status report 4=SOCK
+                self->status = SPHACTOR_REPORT_SOCK;
+                if ( self->reporting )
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+
+                sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
+                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+                if (retmsg)
+                {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
+
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL )
+                        zmsg_destroy(&retmsg);
+                }
+            }
+            else
+            {
+                // it is a socket so let's try our added sockets by passing them to the handler
+                //  update our status report 6=FDSOCK
+                self->status = SPHACTOR_REPORT_FDSOCK;
+                if ( self->reporting )
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+
+                zmsg_t *sockfdm = zmsg_new();
+                zmsg_addmem(sockfdm, &which, sizeof( void *));
+                sphactor_event_t ev = { sockfdm, "FDSOCK", self->name, zuuid_str(self->uuid), self };
+                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+                if (retmsg)
+                {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
+
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL )
+                        zmsg_destroy(&retmsg);
                 }
             }
         }
@@ -984,7 +1059,18 @@ sphactor_actor_test (bool verbose)
     zactor_destroy( &sphactor_reportertest );
 
     // zpoller add / remove test
+    sphactor_shim_t pollershim = { &sph_actor_pollertest, NULL, NULL, NULL };
+    zactor_t *polleractor = zactor_new (sphactor_actor_run, &pollershim);
+    assert (polleractor);
+    zsock_t *pollersend = zsock_new_pair("@inproc://testpoller");
+    zclock_sleep(1000);
+    rc = zstr_send(pollersend, "PING");
+    assert(rc == 0);
 
+
+    zclock_sleep(1000);
+    zactor_destroy(&polleractor);
+    zsock_destroy(&pollersend);
 
     //  @end
     zsys_shutdown();  //  needed by windows
