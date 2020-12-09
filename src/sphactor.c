@@ -424,6 +424,8 @@ sphactor_unregister( const char *actor_type)
     zhash_delete( actors_reg, actor_type );
     free(item);
     item = NULL;
+    // update actors_keys
+    actors_keys = zhash_keys(actors_reg);
     return 0;
 }
 
@@ -450,6 +452,13 @@ void
 sphactor_dispose ()
 {
     zlist_destroy(&actors_keys);
+    // cleanup the registered actors
+    void *it = zhash_first(actors_reg);
+    while (it)
+    {
+        free(it);
+        it = zhash_next(actors_reg);
+    }
     zhash_destroy(&actors_reg);
 }
 
