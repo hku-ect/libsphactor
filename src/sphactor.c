@@ -50,12 +50,12 @@ typedef struct  {
     void *constructor_args; // can be NULL
 } _sphactor_funcs_t;
 
-//  --------------------------------------------------------------------------
-//  Create a new sphactor. Pass a name and uuid. If your specify NULL
-//  a uuid will be generated and the first 6 chars will be used as a name
 //  (forward declare)
 void sphactor_actor_run(zsock_t *pipe, void *args);
 
+//  --------------------------------------------------------------------------
+//  Create a new sphactor. Pass a name and uuid. If your specify NULL
+//  a uuid will be generated and the first 6 chars will be used as a name
 sphactor_t *
 sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t *uuid)
 {
@@ -193,6 +193,7 @@ sphactor_ask_set_actor_type (sphactor_t *self, const char *actor_type)
 {
     assert (self);
     assert (actor_type);
+    self->type = strdup(actor_type);  // cache immediatelly
     zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
 
@@ -352,15 +353,11 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zname = zconfig_new("name", curActor);
     zendpoint = zconfig_new("endpoint", curActor);
     
-    sphactor_ask_uuid (self);
-    zconfig_set_value(zuuid, "%s", zuuid_str(self->uuid));
-    char* type = (char*)sphactor_ask_actor_type(self);
-    zconfig_set_value(ztype, "%s", type);
-    zconfig_set_value(zname, "%s", self->name);
-    zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self));
-    
-    zstr_free(&type);
-    
+    zconfig_set_value(zuuid, "%s", zuuid_str(sphactor_ask_uuid (self) ) );
+    zconfig_set_value(ztype, "%s", sphactor_ask_actor_type(self) );
+    zconfig_set_value(zname, "%s", sphactor_ask_name(self) );
+    zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self) );
+
     return curActor;
 }
 
@@ -431,6 +428,7 @@ sphactor_unregister( const char *actor_type)
     //  this will not touch running actors!!!
     zhash_delete( actors_reg, actor_type );
     // update actors_keys
+    zlist_destroy(&actors_keys);
     actors_keys = zhash_keys(actors_reg);
     free(item);
     item = NULL;
@@ -804,7 +802,7 @@ sphactor_test (bool verbose)
     //assert(rc==0);
     
     //TODO: Set this variable from an environment variable
-    int limit = 2;
+    int limit = 250;
     char *limitStr = getenv("SPHACTOR_SOCKET_LIMIT");
     if ( limitStr != NULL ) {
         limit = atoi(limitStr);
