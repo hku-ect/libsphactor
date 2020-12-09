@@ -32,6 +32,7 @@ struct _sphactor_t {
     char    *name;              //  Copy of our actor's name
     zuuid_t *uuid;              //  Copy of our actor's uuid
     char    *endpoint;          //  Copy of our actor's endpoint
+    char    *type;              //  Copy of our actor's type name
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     int     posx;               //  XY position is used when visualising actors
     int     posy;
@@ -73,6 +74,8 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
         //self->name = strdup(name);
         sphactor_ask_set_name( self, name );
     }
+    self->type = NULL;
+    self->endpoint = NULL;
 
     return self;
 }
@@ -109,12 +112,13 @@ sphactor_destroy (sphactor_t **self_p)
         zstr_free( &self->name);
         if (self->uuid) zuuid_destroy(&self->uuid);
         zstr_free(&self->endpoint);
+        if (self->type)
+            zstr_free(&self->type);
         // free the report cache
         if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
         self->latest_report = NULL;
         self->_sph_act = NULL;   //  we don't own the pointer!!
         //  Free object itself
-
         free (self);
         *self_p = NULL;
     }
@@ -155,8 +159,12 @@ const char *
 sphactor_ask_actor_type (sphactor_t *self)
 {
     assert(self);
-    zstr_send(self->actor, "TYPE");
-    return zstr_recv( self->actor );
+    if ( self->type == NULL )
+    {
+        zstr_send(self->actor, "TYPE");
+        self->type = zstr_recv( self->actor );
+    }
+    return self->type;
 }
 
 const char *
@@ -422,10 +430,10 @@ sphactor_unregister( const char *actor_type)
     }
     //  this will not touch running actors!!!
     zhash_delete( actors_reg, actor_type );
-    free(item);
-    item = NULL;
     // update actors_keys
     actors_keys = zhash_keys(actors_reg);
+    free(item);
+    item = NULL;
     return 0;
 }
 
