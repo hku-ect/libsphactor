@@ -15,47 +15,6 @@
 #define SPHACTOR_H_INCLUDED
 
 #ifdef __cplusplus
-//  forward decl
-struct _sphactor_event_t;
-typedef _sphactor_event_t sphactor_event_t;
-
-template<class SphactorClass>
-SPHACTOR_EXPORT static zmsg_t *
-sphactor_member_handler(sphactor_event_t *ev, void *args)
-{
-    assert(args);
-    SphactorClass *self = static_cast<SphactorClass*>(args);
-    return self->handleMsg(ev);
-};
-
-template<class SphactorClass>
-SPHACTOR_EXPORT static void *
-sphactor_cpp_constructor(void *arg)
-{
-    return new SphactorClass();
-};
-
-template<class SphactorClass>
-SPHACTOR_EXPORT static void *
-sphactor_cpp_arg_constructor(void *arg)
-{
-    return new SphactorClass(arg);
-};
-
-template<class SphactorClass>
-SPHACTOR_EXPORT int
-sphactor_register (const char *actor_type)
-{
-    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_constructor<SphactorClass>, NULL);
-}
-
-template<class SphactorClass>
-SPHACTOR_EXPORT int
-sphactor_register (const char *actor_type, void *constructor_arg)
-{
-    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_arg_constructor<SphactorClass>, constructor_arg);
-}
-
 extern "C" {
 #endif
 

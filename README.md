@@ -126,10 +126,45 @@ You can now use libsphactor as a static (/usr/local/lib/libsphactor.a) or dynami
 ---
 ## Windows
 
-Unfortunately we have no instructions for Windows just yet. Bare with us or help us out by sending us a Pull Request.
+For windows you'll need the latest Visual Studio (i.e. 2019) and cmake.
+
+From a Visualstudio command prompt use the following commands to build everything in c:\projects with binaries in c:\tmp
+
+libzmq
+```
+set INSTALL_PREFIX=C:\tmp\build
+set LIBZMQ_SOURCEDIR=C:\projects\libzmq
+set LIBZMQ_BUILDDIR=%LIBZMQ_SOURCEDIR%\build
+git clone --depth 1 --quiet https://github.com/zeromq/libzmq.git "%LIBZMQ_SOURCED
+md "%LIBZMQ_BUILDDIR%"
+cd "%LIBZMQ_BUILDDIR%"
+cmake .. -DBUILD_STATIC=OFF -DBUILD_SHARED=ON -DZMQ_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX="%INSTALL_PREFIX%"
+cmake --build . --config %Configuration% --target install
+```
+cmzq
+```
+set CZMQ_SOURCEDIR=C:\projects\czmq
+set CZMQ_BUILDDIR="%CZMQ_SOURCEDIR%\build"
+git clone --depth 1 --quiet https://github.com/zeromq/czmq.git "%CZMQ_SOURCEDIR%"
+md "%CZMQ_BUILDDIR%"
+cd "%CZMQ_BUILDDIR%"
+cmake .. -DCZMQ_BUILD_STATIC=OFF -DCZMQ_BUILD_SHARED=ON -DCMAKE_PREFIX_PATH="%INSTALL_PREFIX%" -DCMAKE_INSTALL_PREFIX="%INSTALL_PREFIX%"
+cmake --build . --config %Configuration% --target install
+```
+libsphactor
+```
+set SPH_SOURCEDIR=C:\projects\libsphactor
+set SPH_BUILDDIR=%SPH_BUILDDIR%\build
+git clone --depth 1 --quiet https://github.com/hku-ect/libsphactor.git "%SPH_SOURCEDIR%"
+md "%SPH_BUILDDIR%"
+cd "%SPH_BUILDDIR%"
+cmake .. -DSPHACTOR_BUILD_STATIC=OFF -DSPHACTOR_BUILD_SHARED=ON -DCMAKE_C_FLAGS="-DCZMQ_BUILD_DRAFT_API=1" -DCMAKE_PREFIX_PATH="%INSTALL_PREFIX%" -DCMAKE_INSTALL_PREFIX="%INSTALL_PREFIX%"
+cmake --build . --config Debug --target install
+ctest -C Debug -V
+```
 
 ---
-## Minimal example in C
+## Minimal example in C (Linux with gcc)
 
 test.c:
 ```c
@@ -231,9 +266,11 @@ gcc -o test main.c /usr/local/lib/libsphactor.a /usr/lib/x86_64-linux-gnu/libczm
 
 ## Minimal example in C++
 
+Please note for C++ you need to include *libsphactor.hpp* instead of libsphactor.h!
+
 ```cpp
 #include <iostream>
-#include "libsphactor.h"
+#include "libsphactor.hpp"
 
 // g++ sphactor_selftest.cpp -o test -I ../include/ .libs/libsphactor.a -l czmq
 
@@ -248,6 +285,8 @@ public:
 
     zmsg_t *
     handleMsg( sphactor_event_t *event ) {
+        // just print the event
+        printf("name: %s, type: %s", ev->name, ev->type);
         if ( event->msg == nullptr ) return nullptr;
         char *cmd = zmsg_popstr(event->msg);
         zsys_info("Cpp actor %s says: %s", event->name, cmd);
@@ -311,4 +350,33 @@ int main()
 Compile with:
 ```
 g++ test.cpp -o test -lsphactor -lczmq
+```
+
+As a convenience you can also inherit the Sphactor class:
+
+```
+class Test : public Sphactor
+{
+public:
+
+    Test() {
+    }
+
+    ~Test() { }
+    
+    // handle initialisation
+    zmsg_t * handleInit(sphactor_event_t *ev)
+    
+    // handle timed events
+    zmsg_t * handleTimer(sphactor_event_t *ev) { if ( ev->msg ) zmsg_destroy(&ev->msg); return nullptr; }
+
+    // handle your own API commands
+    zmsg_t * handleAPI(sphactor_event_t *ev) { if ( ev->msg ) zmsg_destroy(&ev->msg); return nullptr; }
+
+    // handle receiving messages
+    zmsg_t * handleSocket(sphactor_event_t *ev) { if ( ev->msg ) zmsg_destroy(&ev->msg); return nullptr; }
+
+    // handle stopping your actor (destroying it is handled for you in the base class)
+    zmsg_t * handleStop(sphactor_event_t *ev) { if ( ev->msg ) zmsg_destroy(&ev->msg); return nullptr; }
+};
 ```
