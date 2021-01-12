@@ -534,7 +534,7 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
     if ( streq( ev->type, "INIT" ) )
     {
 
-        int rc = sphactor_actor_set_capability(ev->actor, zconfig_str_load(capability_string));
+        int rc = sphactor_actor_set_capability((sphactor_actor_t *)ev->actor, zconfig_str_load(capability_string));
         assert(rc == 0);
     }
     if ( ev->msg == NULL ) return NULL;
@@ -617,7 +617,7 @@ hello_report(sphactor_event_t *ev, void *args)
     
     if ( streq(cmd, "CLEAR")) {
         // clear our internal message
-        sphactor_actor_set_custom_report_data(ev->actor, NULL);
+        sphactor_actor_set_custom_report_data((sphactor_actor_t *)ev->actor, NULL);
     }
     else {
         // Generate custom osc message for report
@@ -628,7 +628,7 @@ hello_report(sphactor_event_t *ev, void *args)
         zstr_free(&msgBuffer);
         
         //TODO: Need to be able to set msg on actor instance
-        sphactor_actor_set_custom_report_data(ev->actor, oscMsg);
+        sphactor_actor_set_custom_report_data((sphactor_actor_t *)ev->actor, oscMsg);
     }
     
     zstr_free(&cmd);
@@ -794,7 +794,7 @@ sphactor_test (bool verbose)
      *  In practice the number is 252
      *
      */
-    long start = zclock_usecs();
+    int64_t start = zclock_usecs();
     sphactor_t *prev = NULL;
     zlist_t *spawned_actors = zlist_new();
     
@@ -825,7 +825,7 @@ sphactor_test (bool verbose)
         prev = spawn;
         zclock_sleep(10);
     }
-    long end = zclock_usecs();
+    int64_t end = zclock_usecs();
     zsys_info("%i Actors spawned in %d microseconds (%.6f ms)", limit, end-start, (end-start)/1000.f);
     zclock_sleep(2000);
     zstr_sendm(prev->actor, "SEND");
