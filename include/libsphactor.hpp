@@ -45,8 +45,8 @@ sphactor_register (const char *actor_type, void *constructor_arg)
 class Sphactor
 {
 public:
-    Sphactor();
-    virtual ~Sphactor();
+    Sphactor() {}
+    virtual ~Sphactor() {}
 
     virtual zmsg_t *
     handleInit(sphactor_event_t *ev) { if ( ev->msg ) zmsg_destroy(&ev->msg); return nullptr; }
@@ -82,7 +82,7 @@ public:
         }
         else if ( streq(ev->type, "SOCK") )
         {
-            return this->handleTimer(ev);
+            return this->handleSocket(ev);
         }
         else if ( streq(ev->type, "SOCKFD") )
         {
@@ -107,7 +107,7 @@ public:
         }
         else if ( streq(ev->type, "STOP") )
         {
-            return this->handleTimer(ev);
+            return this->handleStop(ev);
         }
         else if ( streq(ev->type, "DESTROY") )
         {
