@@ -79,7 +79,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->reportMsg = NULL;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
-    InterlockedExchangePointer( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
+    InterlockedExchangePointer( (void **)(&self->atomic_report), sphactor_report_construct( self->status, self->iterations, NULL ) );
 #else
     atomic_store( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
 #endif
@@ -164,11 +164,11 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         zsock_destroy(&self->pub);
         zsock_destroy(&self->sub);
         // iterate subs list and destroy
-        zsock_t *itr = zhash_first( self->subs );
+        zsock_t *itr = (zsock_t *)zhash_first( self->subs );
         while (itr)
         {
             zsock_destroy( &itr );
-            itr = zhash_next( self->subs );
+            itr = (zsock_t *)zhash_next( self->subs );
         }
         zhash_destroy(&self->subs);
 
@@ -313,7 +313,7 @@ sphactor_actor_atomic_set_report( sphactor_actor_t *self, sphactor_report_t *rep
 {
     // swap the report pointer atomically
 #if defined(__WINDOWS__)
-    sphactor_report_t *prev = (sphactor_report_t *)InterlockedExchangePointer( &self->atomic_report, (void *)report);
+    sphactor_report_t *prev = (sphactor_report_t *)InterlockedExchangePointer( (void **)(&self->atomic_report), (void *)report);
 #else
     sphactor_report_t *prev = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)report);
 #endif
@@ -333,7 +333,7 @@ sphactor_actor_atomic_report(sphactor_actor_t *self)
     if ( !self->reporting ) return NULL;   // reporting is disabled
     // swap the report pointer atomically with NULL
 #if defined(__WINDOWS__)
-    sphactor_report_t *report = (sphactor_report_t *)InterlockedExchangePointer( &self->atomic_report, (void *)NULL );
+    sphactor_report_t *report = (sphactor_report_t *)InterlockedExchangePointer( (void **)(&self->atomic_report), (void *)NULL );
 #else
     sphactor_report_t *report = (sphactor_report_t *)atomic_exchange( &self->atomic_report, (void *)NULL );
 #endif
@@ -649,7 +649,7 @@ sph_actor_pollertest(sphactor_event_t *ev, void *args)
     if ( streq(ev->type, "INIT" ) )
     {
         pollerrecv = zsock_new_pair(">inproc://testpoller");
-        sphactor_actor_poller_add(ev->actor, pollerrecv);
+        sphactor_actor_poller_add((sphactor_actor_t*)ev->actor, pollerrecv);
         return NULL;
     }
     else
@@ -660,7 +660,7 @@ sph_actor_pollertest(sphactor_event_t *ev, void *args)
         if (zframe_size(frame) == sizeof( void *) )
         {
             void *p = *(void **)zframe_data(frame);
-            zsock_t *sock = zsock_resolve( p );
+            zsock_t *sock = (zsock_t *)zsock_resolve( p );
             if ( sock )
             {
                 char *msg = zstr_recv(sock);
@@ -861,7 +861,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
         }
         else {
             // TODO remove this, do we need it?
-            zsock_t *sub = zhash_first( self->subs );
+            zsock_t *sub = (zsock_t *)zhash_first( self->subs );
             while ( sub )
             {
                 if ( which == sub )
