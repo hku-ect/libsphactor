@@ -84,7 +84,7 @@ public:
         {
             return this->handleSocket(ev);
         }
-        else if ( streq(ev->type, "SOCKFD") )
+        else if ( streq(ev->type, "FDSOCK") )
         {
             zframe_t *frame = zmsg_pop(ev->msg);
             assert(frame);
