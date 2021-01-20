@@ -77,13 +77,23 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->capability = NULL;
     // initialise the status report
     self->iterations = 0;
+    self->recv_time = 0;
+    self->send_time = 0;
     self->status = SPHACTOR_REPORT_INIT;
     self->reportMsg = NULL;
     // don't use set_report as it will try to free random memory
 #if defined(__WINDOWS__)
-    InterlockedExchangePointer( (void **)(&self->atomic_report), sphactor_report_construct( self->status, self->iterations, NULL ) );
+    InterlockedExchangePointer( (void **)(&self->atomic_report), sphactor_report_construct( self->status,
+                                                                                            self->iterations,
+                                                                                            self->recv_time,
+                                                                                            self->send_time,
+                                                                                            NULL ) );
 #else
-    atomic_store( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, 0, 0, NULL ) );
+    atomic_store( &self->atomic_report, sphactor_report_construct( self->status,
+                                                                   self->iterations,
+                                                                   self->recv_time,
+                                                                   self->send_time,
+                                                                   NULL ) );
 #endif
     if ( self->uuid == NULL)
     {
