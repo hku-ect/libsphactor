@@ -897,6 +897,10 @@ sphactor_test (bool verbose)
 
         zclock_sleep(100);
 
+        // get sender report
+        sphactor_report_t *sender_rep = sphactor_report(sender);
+        assert(sphactor_report_send_time(sender_rep) > 0);
+
         // Wait for the actor to be idle
         zsys_info("Requesting Report");
         sphactor_report_t *report = sphactor_report(reporter);
@@ -905,6 +909,7 @@ sphactor_test (bool verbose)
         // read report status & message
         int reportrc = sphactor_report_status(report);
         assert(reportrc >= 0);
+        assert(sphactor_report_recv_time(report) > 0);
         zosc_t* oscMsg = sphactor_report_custom(report);
         assert(oscMsg);
         
@@ -950,7 +955,9 @@ sphactor_test (bool verbose)
     //  the internal INSTANCE API command is used so in theory this can still
     //  be the status when we retrieve the report!
     assert( sphactor_report_status( report ) == SPHACTOR_REPORT_IDLE || sphactor_report_status( report ) == SPHACTOR_REPORT_API);
-    
+    assert( sphactor_report_send_time( report ) == 0);
+    assert( sphactor_report_recv_time( report ) == 0);
+
     zclock_sleep(10);
     
     report = sphactor_report(reportact);

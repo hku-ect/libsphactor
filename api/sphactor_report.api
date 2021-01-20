@@ -18,6 +18,8 @@
         the given arguments.
         <argument name = "status" type = "integer"optional = "1" />
         <argument name = "iterations" type = "number" size="8" optional = "1" />
+        <argument name = "recv time" type = "msecs" optional = "1" />
+        <argument name = "send time" type = "msecs" optional = "1" />
         <argument name = "custom" type = "zosc" optional = "1" />
     </constructor>
 
@@ -26,28 +28,50 @@
     </destructor>
 
     <method name = "status">
-        return the status in the report
+        Return the status in the report
         <return type = "integer" />
     </method>
 
     <method name = "iterations">
-        return the number of iterations in the report
+        Return the number of iterations in the report
         <return type = "number" size = "8" />
     </method>
 
+    <method name = "send time">
+        Return the time of the last send. 
+        Returns 0 if it has never sent anything or isn't able to.
+        <return type = "msecs" />
+    </method>
+
+    <method name = "recv time">
+        Return the time of the last receive
+        Returns 0 if it has never sent anything or isn't able to.
+        <return type = "msecs" />
+    </method>
+
     <method name = "custom">
-        return the custom status as an OSC message
+        Return the custom status as an OSC message
         <return type = "zosc" />
     </method>
 
     <method name = "set status">
-        set the status in the report
+        Set the status in the report
         <argument name = "status" type = "integer" />
     </method>
 
     <method name = "set iterations">
-        set the number of iterations in the report
+        Set the number of iterations in the report
         <argument name = "iterations" type = "number" size = "8" />
+    </method>
+
+    <method name = "set send time">
+        Set the time of the last send
+        <argument name = "send time" type = "msecs" />
+    </method>
+
+    <method name = "set recv time">
+        Set the time of the last receive
+        <argument name = "recv time" type = "msecs" />
     </method>
 
     <method name = "set custom">

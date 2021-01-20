@@ -50,6 +50,8 @@ struct _sphactor_actor_t {
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
     uint64_t    iterations;       //  number of iterations (cycles) performed
+    int64_t     recv_time;        //  time of last receive on socket
+    int64_t     send_time;        //  time of last send on socket
     int         status;           //  sphactor_report_status constant, see sphactor_report.h
     zconfig_t   *capability;      //  The capability zconfig describing parameters (ie. for generating UI)
     zosc_t      *reportMsg;       //  the report message containing the actor's state
@@ -81,7 +83,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
 #if defined(__WINDOWS__)
     InterlockedExchangePointer( (void **)(&self->atomic_report), sphactor_report_construct( self->status, self->iterations, NULL ) );
 #else
-    atomic_store( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, NULL ) );
+    atomic_store( &self->atomic_report, sphactor_report_construct( self->status, self->iterations, 0, 0, NULL ) );
 #endif
     if ( self->uuid == NULL)
     {
@@ -142,7 +144,11 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         if ( self->reporting )
         {
             self->status = SPHACTOR_REPORT_DESTROY;
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                             self->iterations,
+                                                                             self->recv_time,
+                                                                             self->send_time,
+                                                                             zosc_dup(self->reportMsg)));
         }
 
         // signal upstream we are destroying
@@ -420,6 +426,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         }
         else
             zstr_send ( self->pub, self->name );
+        self->send_time = zclock_mono();
     }
     else
     if (streq (command, "TRIGGER"))     //  trigger the actor to run its callback
@@ -430,6 +437,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         {
             //publish it
             zmsg_send(&retmsg, self->pub);
+            self->send_time = zclock_mono();
         }
         zmsg_destroy( &retmsg );
     }
@@ -747,7 +755,11 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             // so we only set a report when that is not the case
             self->status = SPHACTOR_REPORT_IDLE;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                 self->iterations,
+                                                                                 self->recv_time,
+                                                                                 self->send_time,
+                                                                                 zosc_dup(self->reportMsg)));
         }
 
 
@@ -782,7 +794,11 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             //  update our status report 5=TIME
             self->status = SPHACTOR_REPORT_TIME;
             if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                 self->iterations,
+                                                                                 self->recv_time,
+                                                                                 self->send_time,
+                                                                                 zosc_dup(self->reportMsg)));
 
             // do we have a handler? TODO: we should never have a NULL handler???
             if ( self->handler )
@@ -808,7 +824,11 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 //  update our status report 7=API
                 self->status = SPHACTOR_REPORT_API;
                 if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                     self->iterations,
+                                                                                     self->recv_time,
+                                                                                     self->send_time,
+                                                                                     zosc_dup(self->reportMsg)));
                 sphactor_actor_recv_api (self);
             }
             //  if a sub socket then process actor
@@ -822,7 +842,12 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 //  update our status report 4=SOCK
                 self->status = SPHACTOR_REPORT_SOCK;
                 if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                    self->recv_time = zclock_mono();
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                     self->iterations,
+                                                                                     self->recv_time,
+                                                                                     self->send_time,
+                                                                                     zosc_dup(self->reportMsg)));
 
                 sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
                 zmsg_t *retmsg = self->handler(&ev, self->handler_args);
@@ -830,6 +855,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 {
                     // publish the msg
                     zmsg_send(&retmsg, self->pub);
+                    self->send_time = zclock_mono();
 
                     // delete message if we have no connections (otherwise it leaks)
                     if ( zsock_endpoint(self->pub) == NULL )
@@ -842,7 +868,12 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 //  update our status report 6=FDSOCK
                 self->status = SPHACTOR_REPORT_FDSOCK;
                 if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+                    // TODO: should we set recv time? Or do we do this only on the sub socket?
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                     self->iterations,
+                                                                                     self->recv_time,
+                                                                                     self->send_time,
+                                                                                     zosc_dup(self->reportMsg)));
 
                 zmsg_t *sockfdm = zmsg_new();
                 zmsg_addmem(sockfdm, &which, sizeof( void *));
@@ -885,7 +916,11 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
         self->status = SPHACTOR_REPORT_STOP;
         if ( self->reporting )
-            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                             self->iterations,
+                                                                             self->recv_time,
+                                                                             self->send_time,
+                                                                             zosc_dup(self->reportMsg)));
 
         zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
         if (destrretmsg) zmsg_destroy(&destrretmsg);
