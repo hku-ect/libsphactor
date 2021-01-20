@@ -26,6 +26,8 @@
 struct _sphactor_report_t {
     int status;             //  Status, constants in header, i.e. 0=INIT, 1=IDLE, 2=STOP, 3=DESTROY, 4=SOCK, 5=TIME, 6=FDSOCK, 7=API
     uint64_t iterations;    //  Number of iterations performed
+    int64_t  recv_time;     //  time of last receive on socket
+    int64_t  send_time;     //  time of last send on socket
     zosc_t *custom;         //  Optional custom OSC message
 };
 
@@ -41,18 +43,22 @@ sphactor_report_new (void)
     //  Initialize class properties here
     self->status = 0;
     self->iterations = 0;
+    self->recv_time = 0;
+    self->send_time = 0;
     self->custom = NULL;
     return self;
 }
 
 sphactor_report_t *
-sphactor_report_construct (int status, uint64_t iterations, zosc_t *custom)
+sphactor_report_construct (int status, uint64_t iterations, int64_t recv_time, int64_t send_time, zosc_t *custom)
 {
     sphactor_report_t *self = (sphactor_report_t *) zmalloc (sizeof (sphactor_report_t));
     assert (self);
     //  Initialize class properties here
     self->status = status;
     self->iterations = iterations;
+    self->recv_time = recv_time;
+    self->send_time = send_time;
     self->custom = custom;
     return self;
 }
@@ -71,6 +77,24 @@ sphactor_report_iterations (sphactor_report_t *self)
 {
     assert( self );
     return self->iterations;
+}
+
+//  Return the time of the last send.
+//  Returns 0 if it has never sent anything or isn't able to.
+int64_t
+sphactor_report_send_time (sphactor_report_t *self)
+{
+    assert(self);
+    return self->send_time;
+}
+
+//  Return the time of the last receive
+//  Returns 0 if it has never sent anything or isn't able to.
+int64_t
+sphactor_report_recv_time (sphactor_report_t *self)
+{
+    assert(self);
+    return self->recv_time;
 }
 
 //  return the custom status as an OSC message
@@ -95,6 +119,22 @@ sphactor_report_set_iterations (sphactor_report_t *self, uint64_t iterations)
 {
     assert( self );
     self->iterations = iterations;
+}
+
+//  Set the time of the last send
+void
+sphactor_report_set_send_time (sphactor_report_t *self, int64_t send_time)
+{
+    assert(self);
+    self->send_time = send_time;
+}
+
+//  Set the time of the last receive
+void
+sphactor_report_set_recv_time (sphactor_report_t *self, int64_t recv_time)
+{
+    assert(self);
+    self->recv_time = recv_time;
 }
 
 //  set the custom status as an OSC message
@@ -155,13 +195,19 @@ sphactor_report_test (bool verbose)
     assert( sphactor_report_status(self) == 99 );
     sphactor_report_set_iterations( self, 999 );
     assert( sphactor_report_iterations(self) == 999 );
+    sphactor_report_set_recv_time(self, 333 );
+    assert( sphactor_report_recv_time(self) == 333 );
+    sphactor_report_set_send_time(self, 444 );
+    assert( sphactor_report_send_time(self) == 444 );
     // Todo test custom message
     sphactor_report_destroy (&self);
 
-    sphactor_report_t *constr = sphactor_report_construct( 7, 77, NULL);
+    sphactor_report_t *constr = sphactor_report_construct( 7, 77, 777, 7777, NULL);
     assert(constr);
     assert( sphactor_report_status( constr ) == 7 );
     assert( sphactor_report_iterations( constr ) == 77 );
+    assert( sphactor_report_recv_time( constr ) == 777 );
+    assert( sphactor_report_send_time( constr ) == 7777 );
     assert( sphactor_report_custom( constr ) == NULL );
     sphactor_report_destroy ( &constr );
     //  @end

@@ -40,31 +40,49 @@ SPHACTOR_EXPORT sphactor_report_t *
 //  Constructor, creates a new Sphactor_report instance with
 //  the given arguments.
 SPHACTOR_EXPORT sphactor_report_t *
-    sphactor_report_construct (int status, uint64_t iterations, zosc_t *custom);
+    sphactor_report_construct (int status, uint64_t iterations, int64_t recv_time, int64_t send_time, zosc_t *custom);
 
 //  Destructor, destroys a Sphactor_report instance.
 SPHACTOR_EXPORT void
     sphactor_report_destroy (sphactor_report_t **self_p);
 
-//  return the status in the report
+//  Return the status in the report
 SPHACTOR_EXPORT int
     sphactor_report_status (sphactor_report_t *self);
 
-//  return the number of iterations in the report
+//  Return the number of iterations in the report
 SPHACTOR_EXPORT uint64_t
     sphactor_report_iterations (sphactor_report_t *self);
 
-//  return the custom status as an OSC message
+//  Return the time of the last send.
+//  Returns 0 if it has never sent anything or isn't able to.
+SPHACTOR_EXPORT int64_t
+    sphactor_report_send_time (sphactor_report_t *self);
+
+//  Return the time of the last receive
+//  Returns 0 if it has never sent anything or isn't able to.
+SPHACTOR_EXPORT int64_t
+    sphactor_report_recv_time (sphactor_report_t *self);
+
+//  Return the custom status as an OSC message
 SPHACTOR_EXPORT zosc_t *
     sphactor_report_custom (sphactor_report_t *self);
 
-//  set the status in the report
+//  Set the status in the report
 SPHACTOR_EXPORT void
     sphactor_report_set_status (sphactor_report_t *self, int status);
 
-//  set the number of iterations in the report
+//  Set the number of iterations in the report
 SPHACTOR_EXPORT void
     sphactor_report_set_iterations (sphactor_report_t *self, uint64_t iterations);
+
+//  Set the time of the last send
+SPHACTOR_EXPORT void
+    sphactor_report_set_send_time (sphactor_report_t *self, int64_t send_time);
+
+//  Set the time of the last receive
+SPHACTOR_EXPORT void
+    sphactor_report_set_recv_time (sphactor_report_t *self, int64_t recv_time);
 
 //  set the custom status as an OSC message
 SPHACTOR_EXPORT void
