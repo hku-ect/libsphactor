@@ -1027,7 +1027,7 @@ sphactor_actor_test (bool verbose)
     char *msg1 = zstr_recv(sphactor_actor);
     char *msg2 = zstr_recv(sphactor_actor);
     char *msg3 = zstr_recv(sphactor_actor);
-    if (self->verbose ) zsys_info("%s %s %s", msg1, msg2, msg3);
+    if (verbose ) zsys_info("%s %s %s", msg1, msg2, msg3);
     zstr_send(sphactor_producer, "TRIGGER");
     zclock_sleep(10);   //  prevent destroy before ping being handled
     zstr_free(&msg1);
@@ -1098,7 +1098,7 @@ sphactor_actor_test (bool verbose)
             count++;
             r = sphactor_actor_atomic_report(repact);
         }
-        if (self->verbose ) zsys_info("status: %i, iterations: %i, tried requests: %i", sphactor_report_status(r), sphactor_report_iterations(r), count );
+        if (verbose ) zsys_info("status: %i, iterations: %i, tried requests: %i", sphactor_report_status(r), sphactor_report_iterations(r), count );
         sphactor_report_destroy(&r);
     }
     zactor_destroy( &sphactor_reportertest );
