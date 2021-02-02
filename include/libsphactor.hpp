@@ -68,7 +68,7 @@ public:
 
     zmsg_t *handleMsg(sphactor_event_t *ev)
     {
-        zmsg_t ret = nullptr;
+        zmsg_t *ret = nullptr;
         if ( streq(ev->type, "INIT") )
         {
             ret = this->handleInit(ev);
