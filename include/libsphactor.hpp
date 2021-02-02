@@ -68,21 +68,22 @@ public:
 
     zmsg_t *handleMsg(sphactor_event_t *ev)
     {
+        zmsg_t ret = nullptr;
         if ( streq(ev->type, "INIT") )
         {
-            return this->handleInit(ev);
+            ret = this->handleInit(ev);
         }
         else if ( streq(ev->type, "TIME") )
         {
-            return this->handleTimer(ev);
+            ret = this->handleTimer(ev);
         }
         else if ( streq(ev->type, "API") )
         {
-            return this->handleAPI(ev);
+            ret = this->handleAPI(ev);
         }
         else if ( streq(ev->type, "SOCK") )
         {
-            return this->handleSocket(ev);
+            ret = this->handleSocket(ev);
         }
         else if ( streq(ev->type, "FDSOCK") )
         {
@@ -103,19 +104,21 @@ public:
             }
             zframe_destroy(&frame);
 
-            return this->handleCustomSocket(ev);
+            ret = this->handleCustomSocket(ev);
         }
         else if ( streq(ev->type, "STOP") )
         {
-            return this->handleStop(ev);
+            ret = this->handleStop(ev);
         }
         else if ( streq(ev->type, "DESTROY") )
         {
             delete this;
-            return nullptr;
         }
         else
             zsys_error("Unhandled sphactor event: %s", ev->type);
+
+        if ( ev->msg ) zmsg_destroy(&ev->msg);
+        return ret;
     }
 };
 
