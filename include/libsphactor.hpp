@@ -117,7 +117,8 @@ public:
         else
             zsys_error("Unhandled sphactor event: %s", ev->type);
 
-        if ( ev->msg ) zmsg_destroy(&ev->msg);
+        if (ev->msg && ret != ev->msg)
+            zmsg_destroy (&ev->msg);
         return ret;
     }
 };
