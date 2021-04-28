@@ -678,6 +678,7 @@ sph_actor_pollertest(sphactor_event_t *ev, void *args)
         if (zframe_size(frame) == sizeof( void *) )
         {
             void *p = *(void **)zframe_data(frame);
+            assert( p == pollerrecv );
             zsock_t *sock = (zsock_t *)zsock_resolve( p );
             if ( sock )
             {
