@@ -776,31 +776,14 @@ sphactor_actor_run (zsock_t *pipe, void *args)
 
         void *which = (void *) zpoller_wait (self->poller, (int)time_till_next );
 
-        if (self->timeout > 0 ) self->time_next = zclock_mono() + self->timeout;
-
-        if ( which != NULL && !zsock_is(which) ) {
-            int * fd = (int*)which;
-            /* Obsolete
-            if ( func ) {
-                //  update our status report 6=FDSOCK
-                self->status = SPHACTOR_REPORT_FDSOCK;
-                if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
-
-                zmsg_t * retmsg = func( self, (zsock_t * )fd, NULL ); // this won't work. Just here to make the compiler happy
-                if ( retmsg != NULL ) {
-                    // publish the msg
-                    zmsg_send(&retmsg, self->pub);
-
-                    // delete message if we have no connections (otherwise it leaks)
-                    if ( zsock_endpoint(self->pub) == NULL ) {
-                        zmsg_destroy(&retmsg);
-                    }
-                }
-            } //else??? */
+        bool skipped = ( self->time_next - zclock_mono() <= 0 );
+        if ( self->timeout > 0 ) {
+            while( self->time_next <= zclock_mono() ) {
+                self->time_next += self->timeout;
+            }
         }
 
-        else if ( which == NULL ) {
+        if ( which == NULL || skipped ) {
             //  timed events don't carry a message instead NULL is passed
             //  update our status report 5=TIME
             self->status = SPHACTOR_REPORT_TIME;
@@ -827,6 +810,27 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                     }
                 }
             }
+        }
+        else if ( which != NULL && !zsock_is(which) ) {
+            int * fd = (int*)which;
+            /* Obsolete
+            if ( func ) {
+                //  update our status report 6=FDSOCK
+                self->status = SPHACTOR_REPORT_FDSOCK;
+                if ( self->reporting )
+                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
+
+                zmsg_t * retmsg = func( self, (zsock_t * )fd, NULL ); // this won't work. Just here to make the compiler happy
+                if ( retmsg != NULL ) {
+                    // publish the msg
+                    zmsg_send(&retmsg, self->pub);
+
+                    // delete message if we have no connections (otherwise it leaks)
+                    if ( zsock_endpoint(self->pub) == NULL ) {
+                        zmsg_destroy(&retmsg);
+                    }
+                }
+            } //else??? */
         }
         else if ( zsock_is(which) )
         {
