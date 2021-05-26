@@ -87,23 +87,7 @@ public:
         }
         else if ( streq(ev->type, "FDSOCK") )
         {
-            zframe_t *frame = zmsg_pop(ev->msg);
-            assert(frame);
-            zmsg_destroy(&ev->msg);
-
-            if (zframe_size(frame) == sizeof( void *) )
-            {
-                void *p = *(reinterpret_cast<void **>(zframe_data(frame)));
-                zsock_t *sock = static_cast<zsock_t *>( zsock_resolve(p) );
-                if ( sock )
-                {
-                    zmsg_t *msg = zmsg_recv(sock);
-                    assert(msg);
-                    ev->msg = msg;
-                }
-            }
-            zframe_destroy(&frame);
-
+            assert(ev->msg);
             ret = this->handleCustomSocket(ev);
         }
         else if ( streq(ev->type, "STOP") )
