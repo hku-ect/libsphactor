@@ -176,6 +176,7 @@ set (sphactor_headers
     include/sphactor.h
     include/sphactor_actor.h
     include/sphactor_report.h
+    include/sph_stock.h
 )
 
 source_group ("Header Files" FILES ${sphactor_headers})
@@ -191,6 +192,7 @@ set (sphactor_sources
     src/sphactor.c
     src/sphactor_actor.c
     src/sphactor_report.c
+    src/sph_stock.c
 )
 IF (ENABLE_DRAFTS)
     list (APPEND sphactor_sources
@@ -353,6 +355,32 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sphactorConfig.cmake
 # executables
 ########################################################################
 add_executable(
+    sph
+    "${SOURCE_DIR}/src/sph.c"
+)
+if (TARGET sphactor)
+target_link_libraries(
+    sph
+    sphactor
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+)
+endif()
+if (NOT TARGET sphactor AND TARGET sphactor-static)
+target_link_libraries(
+    sph
+    sphactor-static
+    ${LIBZMQ_LIBRARIES}
+    ${CZMQ_LIBRARIES}
+    ${OPTIONAL_LIBRARIES}
+    ${OPTIONAL_LIBRARIES_STATIC}
+)
+endif()
+install(TARGETS sph
+    RUNTIME DESTINATION bin
+)
+add_executable(
     sphactor_selftest
     "${SOURCE_DIR}/src/sphactor_selftest.c"
 )
@@ -393,6 +421,7 @@ set(TEST_CLASSES
     sphactor
     sphactor_actor
     sphactor_report
+    sph_stock
 )
 
 
@@ -459,6 +488,7 @@ set(cmake_generated ${PROJECT_BINARY_DIR}/CMakeCache.txt
                     ${PROJECT_BINARY_DIR}/src/libsphactor.pc
                     ${PROJECT_BINARY_DIR}/src/libsphactor.so
                     ${PROJECT_BINARY_DIR}/src/libsphactor_selftest
+                    ${PROJECT_BINARY_DIR}/src/sph
                     ${PROJECT_BINARY_DIR}/src/sphactor_selftest
 )
 

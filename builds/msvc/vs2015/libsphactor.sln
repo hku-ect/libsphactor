@@ -2,6 +2,8 @@ Microsoft Visual Studio Solution File, Format Version 14.00
 # builds/msvc/vs2015
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsphactor", "libsphactor\libsphactor.vcxproj", "{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sph", "sph\sph.vcxproj", "{A5497C4B-1CD1-4779-9458-31336}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sphactor_selftest", "sphactor_selftest\sphactor_selftest.vcxproj", "{A5497C4B-1CD1-4779-9458-46236740}"
 EndProject
 Global
@@ -44,6 +46,30 @@ Global
 		{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}.StaticRelease|Win32.Build.0 = ReleaseLIB|Win32
 		{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}.StaticRelease|x64.ActiveCfg = ReleaseLIB|x64
 		{0C4A2E28-8C9E-4B27-85D9-BB679AD84AC7}.StaticRelease|x64.Build.0 = ReleaseLIB|x64
+		{A5497C4B-1CD1-4779-9458-31336}.DynDebug|Win32.ActiveCfg = DebugDEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.DynDebug|Win32.Build.0 = DebugDEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.DynDebug|x64.ActiveCfg = DebugDEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.DynDebug|x64.Build.0 = DebugDEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.DynRelease|Win32.ActiveCfg = ReleaseDEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.DynRelease|Win32.Build.0 = ReleaseDEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.DynRelease|x64.ActiveCfg = ReleaseDEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.DynRelease|x64.Build.0 = ReleaseDEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgDebug|Win32.ActiveCfg = DebugLEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgDebug|Win32.Build.0 = DebugLEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgDebug|x64.ActiveCfg = DebugLEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgDebug|x64.Build.0 = DebugLEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgRelease|Win32.ActiveCfg = ReleaseLEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgRelease|Win32.Build.0 = ReleaseLEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgRelease|x64.ActiveCfg = ReleaseLEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.LtcgRelease|x64.Build.0 = ReleaseLEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.StaticDebug|Win32.ActiveCfg = DebugSEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.StaticDebug|Win32.Build.0 = DebugSEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.StaticDebug|x64.ActiveCfg = DebugSEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.StaticDebug|x64.Build.0 = DebugSEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.StaticRelease|Win32.ActiveCfg = ReleaseSEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.StaticRelease|Win32.Build.0 = ReleaseSEXE|Win32
+		{A5497C4B-1CD1-4779-9458-31336}.StaticRelease|x64.ActiveCfg = ReleaseSEXE|x64
+		{A5497C4B-1CD1-4779-9458-31336}.StaticRelease|x64.Build.0 = ReleaseSEXE|x64
 		{A5497C4B-1CD1-4779-9458-46236740}.DynDebug|Win32.ActiveCfg = DebugDEXE|Win32
 		{A5497C4B-1CD1-4779-9458-46236740}.DynDebug|Win32.Build.0 = DebugDEXE|Win32
 		{A5497C4B-1CD1-4779-9458-46236740}.DynDebug|x64.ActiveCfg = DebugDEXE|x64

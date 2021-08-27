@@ -2,21 +2,21 @@
 
     <method name = "log actor" singleton = "1">
         Simple actor that logs received messages to stdout
-        <argument name = "event" type = "sphactor_event" mutable = "0" />
+        <argument name = "event" type = "sphactor_event" mutable = "1" />
         <argument name = "args" type = "anything" />
         <return type = "zmsg" />
     </method>
 
     <method name = "count actor" singleton = "1">
         Simple actor that counts received messages
-        <argument name = "event" type = "sphactor_event" mutable = "0" />
+        <argument name = "event" type = "sphactor_event" mutable = "1" />
         <argument name = "args" type = "anything" />
         <return type = "zmsg" />
     </method>
 
     <method name = "pulse actor" singleton = "1">
         Simple actor that send a periodic message
-        <argument name = "event" type = "sphactor_event" mutable = "0" />
+        <argument name = "event" type = "sphactor_event" mutable = "1" />
         <argument name = "args" type = "anything" />
         <return type = "zmsg" />
     </method>

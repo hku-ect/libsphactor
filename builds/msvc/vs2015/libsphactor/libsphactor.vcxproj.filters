@@ -16,6 +16,9 @@
     <ClCompile Include="..\..\..\..\src\sphactor_report.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\sph_stock.c">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\src\sphactor_private_selftest.c">
       <Filter>src</Filter>
     </ClCompile>

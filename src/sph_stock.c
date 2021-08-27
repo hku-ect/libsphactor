@@ -27,7 +27,7 @@ const char * logCapabilities = "inputs\n"
 
 
 zmsg_t *
-sph_stock_log_actor( const sphactor_event_t *ev, void* args )
+sph_stock_log_actor( sphactor_event_t *ev, void* args )
 {
     if ( streq(ev->type, "INIT")) {
         sphactor_actor_set_capability((sphactor_actor_t*)ev->actor, zconfig_str_load(logCapabilities));
@@ -69,7 +69,7 @@ const char * countCapabilities = "inputs\n"
                                 "        type = \"OSC\"\n";
 
 zmsg_t *
-sph_stock_count_actor( const sphactor_event_t *ev, void* args )
+sph_stock_count_actor( sphactor_event_t *ev, void* args )
 {
     static int sph_stock_count_actor_count = 0;
     if ( streq(ev->type, "INIT")) {
@@ -117,7 +117,7 @@ const char * pulseCapabilities =
                                 "        type = \"OSC\"\n";
 
 zmsg_t *
-sph_stock_pulse_actor( const sphactor_event_t *ev, void* args )
+sph_stock_pulse_actor( sphactor_event_t *ev, void* args )
 {
     static int sph_stock_count_actor_count = 0;
     if ( streq(ev->type, "INIT")) {

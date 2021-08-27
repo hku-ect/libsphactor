@@ -7,6 +7,7 @@ include_HEADERS = \
     sphactor.h \
     sphactor_actor.h \
     sphactor_report.h \
+    sph_stock.h \
     sphactor_library.h
 
 

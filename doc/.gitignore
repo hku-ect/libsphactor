@@ -17,6 +17,10 @@ sphactor_actor.txt
 sphactor_actor.doc
 sphactor_report.txt
 sphactor_report.doc
+sph_stock.txt
+sph_stock.doc
+sph.txt
+sph.doc
 
 # Make sure to track the manually maintained project description
 !*.adoc
