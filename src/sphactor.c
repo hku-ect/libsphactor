@@ -83,6 +83,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 sphactor_t *
 sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
 {
+    assert(actors_reg); // make sure something has ever been registered
     _sphactor_funcs_t *funcs = (_sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
     if ( funcs == NULL )
     {
