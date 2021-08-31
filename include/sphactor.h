@@ -48,6 +48,10 @@ SPHACTOR_EXPORT sphactor_t *
 SPHACTOR_EXPORT sphactor_t *
     sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid);
 
+//  Constructor, create an actor from the provided configuration
+SPHACTOR_EXPORT sphactor_t *
+    sphactor_load (const zconfig_t *config);
+
 //  Destructor, destroys a Sphactor instance.
 SPHACTOR_EXPORT void
     sphactor_destroy (sphactor_t **self_p);
@@ -140,6 +144,11 @@ SPHACTOR_EXPORT void
 //  containing its capability parameters.
 SPHACTOR_EXPORT zconfig_t *
     sphactor_ask_capability (sphactor_t *self);
+
+//  Do an API request to the running actor. (TODO perhaps make this variadic)
+//  Returns 0 if send succesfully.
+SPHACTOR_EXPORT int
+    sphactor_ask_api (sphactor_t *self, const char *api_call, const char *api_format, const char *value);
 
 //  Set the stage position of the actor.
 SPHACTOR_EXPORT void
