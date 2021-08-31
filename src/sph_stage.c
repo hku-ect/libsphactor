@@ -175,7 +175,7 @@ sph_stage_save(sph_stage_t *self)
     assert(self->config_path);
     // TODO: create zconfig
     zconfig_t* config = zconfig_new("root", NULL);
-    zconfig_save(config, self->config_path);
+    return zconfig_save(config, self->config_path);
 }
 
 int
