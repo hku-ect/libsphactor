@@ -16,6 +16,7 @@ src_libsphactor_la_SOURCES = \
     src/sphactor.c \
     src/sphactor_actor.c \
     src/sphactor_report.c \
+    src/sph_stage.c \
     src/sph_stock.c \
     src/platform.h
 
@@ -65,6 +66,7 @@ dist_api_DATA = \
     api/sphactor.api \
     api/sphactor_actor.api \
     api/sphactor_report.api \
+    api/sph_stage.api \
     api/sph_stock.api
 
 # define custom target for all products of /src
@@ -168,6 +170,13 @@ check-sphactor_report-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_
 	$(LIBTOOL) --mode=execute $(builddir)/src/sphactor_selftest -v -t sphactor_report
 	$(MAKE) check-empty-selftest-rw
 
+check-sph_stage: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/sphactor_selftest -t sph_stage
+	$(MAKE) check-empty-selftest-rw
+check-sph_stage-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute $(builddir)/src/sphactor_selftest -v -t sph_stage
+	$(MAKE) check-empty-selftest-rw
+
 check-sph_stock: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/sphactor_selftest -t sph_stock
 	$(MAKE) check-empty-selftest-rw
@@ -235,6 +244,20 @@ memcheck-sphactor_report-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTE
 		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/sphactor_selftest -v -t sphactor_report
 	$(MAKE) check-empty-selftest-rw
+memcheck-sph_stage: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/sphactor_selftest -t sph_stage
+	$(MAKE) check-empty-selftest-rw
+memcheck-sph_stage-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/sphactor_selftest -v -t sph_stage
+	$(MAKE) check-empty-selftest-rw
 memcheck-sph_stock: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
@@ -293,6 +316,16 @@ callcheck-sphactor_report-verbose: src/sphactor_selftest $(top_builddir)/$(SELFT
 		$(VALGRIND_OPTIONS) \
 		$(builddir)/src/sphactor_selftest -v -t sphactor_report
 	$(MAKE) check-empty-selftest-rw
+callcheck-sph_stage: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/sphactor_selftest -t sph_stage
+	$(MAKE) check-empty-selftest-rw
+callcheck-sph_stage-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(VALGRIND_OPTIONS) \
+		$(builddir)/src/sphactor_selftest -v -t sph_stage
+	$(MAKE) check-empty-selftest-rw
 callcheck-sph_stock: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
 		$(VALGRIND_OPTIONS) \
@@ -338,6 +371,14 @@ debug-sphactor_report: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) 
 debug-sphactor_report-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
 		--args $(builddir)/src/sphactor_selftest -v -t sphactor_report
+	$(MAKE) check-empty-selftest-rw
+debug-sph_stage: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/sphactor_selftest -t sph_stage
+	$(MAKE) check-empty-selftest-rw
+debug-sph_stage-verbose: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		--args $(builddir)/src/sphactor_selftest -v -t sph_stage
 	$(MAKE) check-empty-selftest-rw
 debug-sph_stock: src/sphactor_selftest $(top_builddir)/$(SELFTEST_DIR_RW) $(top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \

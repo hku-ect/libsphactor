@@ -176,6 +176,7 @@ set (sphactor_headers
     include/sphactor.h
     include/sphactor_actor.h
     include/sphactor_report.h
+    include/sph_stage.h
     include/sph_stock.h
 )
 
@@ -192,6 +193,7 @@ set (sphactor_sources
     src/sphactor.c
     src/sphactor_actor.c
     src/sphactor_report.c
+    src/sph_stage.c
     src/sph_stock.c
 )
 IF (ENABLE_DRAFTS)
@@ -421,6 +423,7 @@ set(TEST_CLASSES
     sphactor
     sphactor_actor
     sphactor_report
+    sph_stage
     sph_stock
 )
 
