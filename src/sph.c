@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <gnu/lib-names.h>
 
 static int
 print_help()
