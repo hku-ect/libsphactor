@@ -15,6 +15,7 @@
     <class name = "sphactor" />
     <class name = "sphactor_actor" />
     <class name = "sphactor_report" />
+    <class name = "sph stage" />
     <class name = "sph stock" />
     <target name = "travis" />
     <target name = "vs2015" />
