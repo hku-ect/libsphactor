@@ -78,7 +78,7 @@ sph_stage_load(sph_stage_t *self, const char *config_path)
         zsys_error("Error loading %s", config_path);
         return -1;
     }
-    int rc = sph_stage_cnf_load(root);
+    int rc = sph_stage_cnf_load(self, root);
     zconfig_destroy(&root);
     return rc;
 }
