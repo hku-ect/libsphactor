@@ -104,12 +104,12 @@ sphactor_t *
 sphactor_load(const zconfig_t *config)
 {
     assert( config );
-    zconfig_t* uuid = zconfig_locate(config, "uuid");
-    zconfig_t* type = zconfig_locate(config, "type");
-    zconfig_t* name = zconfig_locate(config, "name");
-    zconfig_t* endpoint = zconfig_locate(config, "endpoint");
-    zconfig_t* xpos = zconfig_locate(config, "xpos");
-    zconfig_t* ypos = zconfig_locate(config, "ypos");
+    zconfig_t* uuid = zconfig_locate((zconfig_t *)config, "uuid");
+    zconfig_t* type = zconfig_locate((zconfig_t *)config, "type");
+    zconfig_t* name = zconfig_locate((zconfig_t *)config, "name");
+    zconfig_t* endpoint = zconfig_locate((zconfig_t *)config, "endpoint");
+    zconfig_t* xpos = zconfig_locate((zconfig_t *)config, "xpos");
+    zconfig_t* ypos = zconfig_locate((zconfig_t *)config, "ypos");
 
     char *uuidStr = zconfig_value(uuid);
     char *typeStr = zconfig_value(type);
@@ -400,7 +400,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
     // this is still somewhat narrow but works for now
     if ( strlen(api_format) == 1 )
     {
-        char *fmt = malloc(3); //strlen(api_format) + 2); // +2 starting s and for the null-terminator
+        char *fmt = (char *)malloc(3); //strlen(api_format) + 2); // +2 starting s and for the null-terminator
         strcpy(fmt, "s");
         strcat(fmt, api_format);
         char type = api_format[0];

@@ -67,30 +67,13 @@ sph_stage_destroy (sph_stage_t **self_p)
 }
 
 int
-sph_stage_load(sph_stage_t *self, const char *config_path)
-{
-    assert(self);
-    assert(config_path);
-    self->config_path = strdup(config_path);
-    zconfig_t* root = zconfig_load(config_path);
-    if ( root == NULL )
-    {
-        zsys_error("Error loading %s", config_path);
-        return -1;
-    }
-    int rc = sph_stage_cnf_load(self, root);
-    zconfig_destroy(&root);
-    return rc;
-}
-
-int
 sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
 {
     assert(cnf);
 
     // TODO: retrieve stage name???
 
-    zconfig_t* actors_conf = zconfig_locate(cnf, "actors");
+    zconfig_t* actors_conf = zconfig_locate((zconfig_t *)cnf, "actors");
     assert(actors_conf);
     zconfig_t* actor_conf = zconfig_locate(actors_conf, "actor");
     assert(actor_conf);
@@ -101,7 +84,7 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         assert(new_actor);
 
         // save actor
-        int rc = zhash_insert(self->actors, sphactor_ask_uuid(new_actor), new_actor);
+        int rc = zhash_insert(self->actors, zuuid_str(sphactor_ask_uuid(new_actor)), new_actor);
         assert( rc == 0);
 
         // load settings for actor
@@ -110,7 +93,7 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         actor_conf = zconfig_next(actor_conf);
     }
     // handle connections
-    zconfig_t* connections = zconfig_locate(cnf, "connections");
+    zconfig_t* connections = zconfig_locate((zconfig_t *)cnf, "connections");
     zconfig_t* con = zconfig_locate( connections, "con");
     while( con != NULL ) {
         char* conVal = zconfig_value(con);
@@ -121,9 +104,9 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
             if ( conVal[i] == ',' ) break;
         }
 
-        char* output = malloc(i+1);//new char[i+1];
-        char* input = malloc(strlen(conVal)-i);
-        char* type[64];// = malloc(64);
+        char* output = (char *)malloc(i+1);//new char[i+1];
+        char* input = (char *)malloc(strlen(conVal)-i);
+        char type[64];// = malloc(64);
 
         char * pch;
         pch = strtok (conVal,",");
@@ -151,6 +134,23 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         free(input);
     }
     return zhash_size(self->actors);
+}
+
+int
+sph_stage_load(sph_stage_t *self, const char *config_path)
+{
+    assert(self);
+    assert(config_path);
+    self->config_path = strdup(config_path);
+    zconfig_t* root = zconfig_load(config_path);
+    if ( root == NULL )
+    {
+        zsys_error("Error loading %s", config_path);
+        return -1;
+    }
+    int rc = sph_stage_cnf_load(self, root);
+    zconfig_destroy(&root);
+    return rc;
 }
 
 int
@@ -187,8 +187,8 @@ sph_stage_save_as(sph_stage_t *self, const char *config_path)
     zconfig_t* config = zconfig_new("root", NULL);
     int rc = zconfig_save(config, config_path);
     assert(rc == 0);
-    zstr_free(self->config_path);
-    self->config_path = config_path;
+    zstr_free(&self->config_path);
+    self->config_path = strdup(config_path);
     return rc;
 }
 
