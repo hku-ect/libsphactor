@@ -83,6 +83,7 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 sphactor_t *
 sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
 {
+    assert(actors_reg); // make sure something has ever been registered
     _sphactor_funcs_t *funcs = (_sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
     if ( funcs == NULL )
     {
@@ -95,7 +96,91 @@ sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
         instance = funcs->constructor(funcs->constructor_args);
     sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
     assert( self );
+    sphactor_ask_set_actor_type(self, actor_type);
     return self;
+}
+
+sphactor_t *
+sphactor_load(const zconfig_t *config)
+{
+    assert( config );
+    zconfig_t* uuid = zconfig_locate((zconfig_t *)config, "uuid");
+    zconfig_t* type = zconfig_locate((zconfig_t *)config, "type");
+    zconfig_t* name = zconfig_locate((zconfig_t *)config, "name");
+    zconfig_t* endpoint = zconfig_locate((zconfig_t *)config, "endpoint");
+    zconfig_t* xpos = zconfig_locate((zconfig_t *)config, "xpos");
+    zconfig_t* ypos = zconfig_locate((zconfig_t *)config, "ypos");
+
+    char *uuidStr = zconfig_value(uuid);
+    char *typeStr = zconfig_value(type);
+    char *nameStr = zconfig_value(name);
+    char *endpointStr = zconfig_value(endpoint);
+    char *xposStr = zconfig_value(xpos);
+    char *yposStr = zconfig_value(ypos);
+
+    zuuid_t *uid = zuuid_new();
+    zuuid_set_str(uid, uuidStr);
+    // create actor
+    sphactor_t* new_actor = sphactor_new_by_type(typeStr, nameStr, uid);
+    assert(new_actor);
+
+    // set position
+    sphactor_set_position( new_actor, atoi(xposStr), atoi(yposStr) );
+    //  TODO: we don't handle the endpoint (yet)
+
+    //  We're assuming the ypos is the last thing added by the sphactor serialization
+    //  from there we ready until we receive null and send that to the high-level actor
+    //sph_deserialise_actor_data(new_actor, config);
+    zconfig_t *capability = sphactor_ask_capability(new_actor);
+    if ( capability )
+    {
+        zconfig_t *cnf = zconfig_next(ypos);
+        while ( cnf != NULL )
+        {
+            char *cnfStr = zconfig_value(cnf);
+            char *cnfNme = zconfig_name(cnf);
+
+            zconfig_t *root = zconfig_locate(capability, "capabilities");
+            //  here we have to lookup cnfNme in the capabilities to see if it matches
+            //  in order to find the api_call key of the capability with its optional format
+            if ( root ) {
+                zconfig_t *data = zconfig_locate(root, "data");
+                while ( data ) {
+                    zconfig_t *name = zconfig_locate(data, "name");
+                    if (name && streq(zconfig_value(name), cnfNme) )
+                    {
+                        // match name the correct name
+                        /*zconfig_t *value = zconfig_locate(data, "value");
+                        if ( value )
+                        {
+                            zconfig_set_value(value, "%s", cnfStr);
+                        }*/
+                        zconfig_t *zapic = zconfig_locate(data, "api_call");
+                        if (zapic)
+                        {
+                            zconfig_t *zapiv = zconfig_locate(data, "api_value");
+                            if (zapiv)
+                                sphactor_ask_api(new_actor, zconfig_value(zapic), zconfig_value(zapiv), cnfStr);
+                            else
+                                sphactor_ask_api(new_actor, zconfig_value(zapic), "", cnfStr);
+                        }
+                    }
+                    data = zconfig_next(data);
+                }
+            }
+            cnf = zconfig_next(cnf);
+        }
+    }
+    else
+    {
+        zsys_warning("no capability for this actor, thus no API calls. We should fix this!");
+    }
+
+    //free(uuidStr);
+    //free(typeStr);
+    //free(endpointStr);
+
+    return new_actor;
 }
 
 //  --------------------------------------------------------------------------
@@ -304,6 +389,53 @@ sphactor_ask_capability (sphactor_t *self)
     rc = zsock_recv( self->actor, "p", &capconf);
     assert( rc == 0 );
     return capconf;
+}
+
+int
+sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format, const char *value)
+{
+    assert(self);
+    assert(strlen(api_call));
+    assert(api_format);
+    // this is still somewhat narrow but works for now
+    if ( strlen(api_format) == 1 )
+    {
+        char *fmt = (char *)malloc(3); //strlen(api_format) + 2); // +2 starting s and for the null-terminator
+        strcpy(fmt, "s");
+        strcat(fmt, api_format);
+        char type = api_format[0];
+        int rc = 0;
+        switch( type )
+        {
+            case 'b': {
+                /*
+                 * Do we use this? it's incorrect
+                char *buf = new char[4];
+                const char *zvalueStr = zconfig_value(zvalue);
+                strcpy(buf, zvalueStr);
+                SendAPI<char *>(zapi_call, zapiv, zvalue, &buf);
+                zstr_free(&buf);
+                */
+                zsys_error("Unsupprted 'b' format char in send_api");
+            } break;
+            case 'i': {
+                rc = zsock_send( sphactor_socket(self), fmt, api_call, atoi(value));
+            } break;
+            case 'f': {
+                rc = zsock_send( sphactor_socket(self), fmt, api_call, atof(value));
+            } break;
+            case 's': {
+                rc = zsock_send( sphactor_socket(self), fmt, api_call, value);
+            } break;
+            default: {
+                zsys_error("Unsupported send_api call: api_call: %s, api_format: %s, value: %s", api_call, api_format, value);
+                rc = -1;
+            } break;
+        }
+        free(fmt);
+        return rc;
+    }
+    return zsock_send( sphactor_socket(self), "si", api_call, atoi(value));
 }
 
 void
@@ -986,9 +1118,48 @@ sphactor_test (bool verbose)
     sphactor_t *apiact = sphactor_new ( api_sphactor, NULL, NULL, NULL);
     assert(apiact);
     // trigger custom api
-    zsock_send( sphactor_socket(apiact), "si", "TESTAPI", 123 );
+    sphactor_ask_api(apiact, "TESTAPI", "i", "123");
+    //zsock_send( sphactor_socket(apiact), "si", "TESTAPI", 123 );
     zclock_sleep(10);
     sphactor_destroy(&apiact);
+
+    // sphactor_load test
+    zconfig_t *root = zconfig_str_load (
+    "actors\n"
+    "    actor\n"
+    "        uuid = \"7B21D87CB6B04FC5801A5B396269876D\"\n"
+    "        type = \"Log\"\n"
+    "        name = \"8FADA7\"\n"
+    "        endpoint = \"inproc://8FADA7E8835E42D5AF85FC75F4A9B70E\"\n"
+    "        xpos = \"502.500000\"\n"
+    "        ypos = \"312.000000\"\n"
+    /*"    actor\n"
+    "        uuid = \"2A7110DFC47C4DF19EB1D17E390CF86B\"\n"
+    "        type = \"Pulse\"\n"
+    "        name = \"2A7110\"\n"
+    "        endpoint = \"inproc://2A7110DFC47C4DF19EB1D17E390CF86B\"\n"
+    "        xpos = \"34.500000\"\n"
+    "        ypos = \"426.000000\"\n"
+    "        timeout = \"1000\"\n"
+    "        someFloat = \"1.0\"\n"
+    "        someText = \"Hello world!\"\n"
+    "connections\n"
+    "    con = \"inproc://2A7110DFC47C4DF19EB1D17E390CF86B,inproc://7B21D87CB6B04FC5801A5B396269876D,OSC\"\n"
+                */
+    ///"    con = \"inproc://7B21D87CB6B04FC5801A5B396269876D,inproc://8FADA7E8835E42D5AF85FC75F4A9B70E,OSC\"\n"
+    );
+
+    // register Log
+    rc = sphactor_register("Log", regtest_handler, regtest_constructor, "test");
+    assert(rc == 0);
+    sphactor_t *loadedactor = sphactor_load(zconfig_locate(root, "actors/actor"));
+    assert(loadedactor);
+    assert( streq(sphactor_ask_name(loadedactor), "8FADA7") );
+    assert( streq(sphactor_ask_actor_type(loadedactor), "Log") );
+    assert( streq(zuuid_str(sphactor_ask_uuid(loadedactor)), "7B21D87CB6B04FC5801A5B396269876D" ) );
+    sphactor_destroy(&loadedactor);
+    sphactor_unregister("Log");
+    zconfig_destroy(&root);
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end

@@ -522,6 +522,16 @@ fi
      AC_MSG_RESULT([$enable_dist_cmakefiles])])
 AM_CONDITIONAL(ENABLE_DIST_CMAKEFILES, test "x$enable_dist_cmakefiles" = "xyes")
 
+# Check for sph intent
+AC_ARG_ENABLE([sph],
+    AS_HELP_STRING([--enable-sph],
+        [Compile and install 'sph' [default=yes]]),
+    [enable_sph=$enableval],
+    [enable_sph=yes])
+
+AM_CONDITIONAL([ENABLE_SPH], [test x$enable_sph != xno])
+AM_COND_IF([ENABLE_SPH], [AC_MSG_NOTICE([ENABLE_SPH defined])])
+
 # Check for sphactor_selftest intent
 AC_ARG_ENABLE([sphactor_selftest],
     AS_HELP_STRING([--enable-sphactor_selftest],

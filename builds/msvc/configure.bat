@@ -12,6 +12,7 @@ IF %1.==--help. (
     ECHO    --help                  show this help
     ECHO    --enable-drafts         from zip package, enables DRAFT API
     ECHO    --disable-drafts        from git repository, disables DRAFT API
+    ECHO    --without-sph           do not build sph.exe
     ECHO    --without-sphactor_selftest  do not build sphactor_selftest.exe
     GOTO :eof
 )

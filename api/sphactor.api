@@ -53,6 +53,11 @@
         <argument name = "uuid" type = "zuuid" optional = "1" />
     </constructor>
 
+    <constructor name = "load" >
+        Constructor, create an actor from the provided configuration
+        <argument name = "config" type = "zconfig" mutable = "0" />
+    </constructor>
+
     <destructor>
         Destructor, destroys a Sphactor instance. 
     </destructor>
@@ -141,6 +146,15 @@
         Request the actor's capability. This consists of a zconfig string 
         containing its capability parameters.
         <return type = "zconfig" />
+    </method>
+
+    <method name = "ask api">
+        Do an API request to the running actor. (TODO perhaps make this variadic)
+        Returns 0 if send succesfully.
+        <argument name = "api_call" type = "string" />
+        <argument name = "api_format" type = "string" />
+        <argument name = "value" type = "string" />
+        <return type = "integer" />
     </method>
     
     <method name = "set position">
