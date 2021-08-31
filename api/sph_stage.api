@@ -1,0 +1,38 @@
+<class name = "sph_stage" state = "stable">
+
+    <constructor>
+        Constructor, creates a new Sphactor stage.
+        <argument name = "stage name" type = "string" />
+    </constructor>
+
+    <destructor>
+        Destructor, destroys a Sphactor stage and its actors. 
+    </destructor>
+
+    <method name = "load">
+        Load the stage from a stage config filepath.
+        Return -1 on failure or the number of actors sucessfully loaded.
+        <argument name = "config path" type = "string" />
+        <return type = "integer"/>
+    </method>
+
+    <method name = "save">
+        Save the stage to the active config filepath.
+        Return -1 on failure or 0 on success.
+        <return type = "integer"/>
+    </method>
+
+    <method name = "save as">
+        Save the stage to the a config filepath.
+        Return -1 on failure or 0 on success.
+        <argument name = "config path" type = "string" />
+        <return type = "integer"/>
+    </method>
+
+    <method name = "clear">
+        Clear the stage, destroying all actors in the stage.
+        <return type = "integer"/>
+    </method>
+
+</class>
+
