@@ -23,7 +23,7 @@
 #include "sph_stock.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <dlfcn.h>
+//#include <dlfcn.h>
 
 static int
 print_help()
