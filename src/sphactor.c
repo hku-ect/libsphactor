@@ -76,7 +76,9 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     }
     self->type = NULL;
     self->endpoint = NULL;
-
+    self->subscriptions = zlist_new();
+    zlist_comparefn (self->subscriptions, (zlist_compare_fn *) strcmp);
+    zlist_autofree (self->subscriptions); // only works for char *
     return self;
 }
 
@@ -203,6 +205,7 @@ sphactor_destroy (sphactor_t **self_p)
         if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
         self->latest_report = NULL;
         self->_sph_act = NULL;   //  we don't own the pointer!!
+        zlist_destroy(&self->subscriptions);  // the list uses autofree!
         //  Free object itself
         free (self);
         *self_p = NULL;
@@ -323,12 +326,24 @@ sphactor_ask_connect (sphactor_t *self, const char *endpoint)
     char *cmd = zmsg_popstr( response );
     assert( streq( cmd, "CONNECTED"));
     char *dest = zmsg_popstr(response);
+    assert(streq(dest, endpoint));
     char *rc = zmsg_popstr(response);
     assert ( streq(rc, "0") );
     int rci = streq(rc, "0") ? 0 : -1;
     
+    // save our connection
+    if ( zlist_exists(self->subscriptions, dest) )
+    {
+        zsys_warning("Connection %s already exists", dest);
+        zstr_free(&dest);
+    }
+    else
+    {
+        zlist_append(self->subscriptions, dest);
+    }
+
     zstr_free(&cmd);
-    zstr_free(&dest);
+    // zstr_free(&dest); is moved to subscriptions list where it will be destroyed
     zstr_free(&rc);
     zmsg_destroy(&response);
 
@@ -346,15 +361,27 @@ sphactor_ask_disconnect (sphactor_t *self, const char *endpoint)
     char *cmd = zmsg_popstr( response );
     assert( streq( cmd, "DISCONNECTED"));
     char *dest = zmsg_popstr(response);
+    assert(streq(dest, endpoint));
     char *rcc = zmsg_popstr(response);
     assert ( streq(rcc, "0") );
     int rci = streq(rcc, "0") ? 0 : -1;
+
+    // this does nothing if the endpoint is not in the list
+    zlist_remove(self->subscriptions, endpoint);
+
     zstr_free(&cmd);
     zstr_free(&dest);
     zstr_free(&rcc);
     zmsg_destroy(&response);
 
     return rci;
+}
+
+zlist_t *
+sphactor_connections(sphactor_t *self)
+{
+    assert(self);
+    return self->subscriptions;
 }
 
 zsock_t *
@@ -889,9 +916,12 @@ sphactor_test (bool verbose)
     //  connect sub to pub
     int rc = sphactor_ask_connect(sub, pubendp);
     assert( rc == 0);
+    assert( zlist_exists(sphactor_connections(sub), pubendp) );
+
     //  disconnect sub to pub
     rc = sphactor_ask_disconnect(sub, pubendp);
     assert( rc == 0);
+    assert( ! zlist_exists(sphactor_connections(sub), pubendp) );
 
     zstr_free( &endpointest );
     sphactor_destroy (&pub);
