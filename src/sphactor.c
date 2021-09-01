@@ -367,7 +367,7 @@ sphactor_ask_disconnect (sphactor_t *self, const char *endpoint)
     int rci = streq(rcc, "0") ? 0 : -1;
 
     // this does nothing if the endpoint is not in the list
-    zlist_remove(self->subscriptions, endpoint);
+    zlist_remove(self->subscriptions, dest);
 
     zstr_free(&cmd);
     zstr_free(&dest);
@@ -916,12 +916,12 @@ sphactor_test (bool verbose)
     //  connect sub to pub
     int rc = sphactor_ask_connect(sub, pubendp);
     assert( rc == 0);
-    assert( zlist_exists(sphactor_connections(sub), pubendp) );
+    assert( zlist_exists(sphactor_connections(sub), (void *)pubendp) );
 
     //  disconnect sub to pub
     rc = sphactor_ask_disconnect(sub, pubendp);
     assert( rc == 0);
-    assert( ! zlist_exists(sphactor_connections(sub), pubendp) );
+    assert( ! zlist_exists(sphactor_connections(sub), (void *)pubendp) );
 
     zstr_free( &endpointest );
     sphactor_destroy (&pub);
