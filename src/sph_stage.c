@@ -105,8 +105,8 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
             if ( conVal[i] == ',' ) break;
         }
 
-        char* output[256];// = (char *)malloc(i+1);//new char[i+1];
-        char* input[256];// = (char *)malloc((strlen(conVal) + 4) - i);
+        char output[256];// = (char *)malloc(i+1);//new char[i+1];
+        char input[256];// = (char *)malloc((strlen(conVal) + 4) - i);
         char type[64];// = malloc(64);
 
         char * pch;
