@@ -51,6 +51,24 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sph_stage_clear (sph_stage_t *self);
 
+//  Return the hash map of actors from the stage.
+SPHACTOR_EXPORT const zhash_t *
+    sph_stage_actors (sph_stage_t *self);
+
+//  Find an actor by it's identifier (uuid). Returns a sphactor reference or NULL if not found.
+//  Please note: if you want to destroy the actor it's best to use the remove_actor method of
+//  this class so it's also remove from the stage.
+SPHACTOR_EXPORT sphactor_t *
+    sph_stage_find_actor (sph_stage_t *self, const char *id);
+
+//  Remove an actor by it's identifier (uuid) and destroy it. Returns 0 if succesful -1 if not found.
+SPHACTOR_EXPORT int
+    sph_stage_remove_actor (sph_stage_t *self, const char *id);
+
+//  Add an actor to the stage. Returns 0 if succesful -1 if not found.
+SPHACTOR_EXPORT int
+    sph_stage_add_actor (sph_stage_t *self, sphactor_t *actor);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sph_stage_test (bool verbose);
