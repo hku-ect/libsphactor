@@ -126,6 +126,10 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_ask_disconnect (sphactor_t *self, const char *endpoint);
 
+//  Return the list of connections of this actor.
+SPHACTOR_EXPORT zlist_t *
+    sphactor_connections (sphactor_t *self);
+
 //  Return socket for talking to the actor and for polling.
 SPHACTOR_EXPORT zsock_t *
     sphactor_socket (sphactor_t *self);

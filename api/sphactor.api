@@ -125,6 +125,11 @@
         <return type = "integer" />
     </method>
 
+    <method name = "connections">
+        Return the list of connections of this actor.
+        <return type  = "zlist" />
+    </method>
+
     <method name = "socket">
         Return socket for talking to the actor and for polling.
         <return type = "zsock" />
