@@ -339,11 +339,11 @@ sphactor_ask_connect (sphactor_t *self, const char *endpoint)
     }
     else
     {
-        zlist_append(self->subscriptions, dest);
+        zlist_append(self->subscriptions, dest); // list uses auto free so dest will be duped
     }
 
     zstr_free(&cmd);
-    // zstr_free(&dest); is moved to subscriptions list where it will be destroyed
+    zstr_free(&dest);
     zstr_free(&rc);
     zmsg_destroy(&response);
 

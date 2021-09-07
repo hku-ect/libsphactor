@@ -59,6 +59,7 @@ sph_stage_destroy (sph_stage_t **self_p)
         //  Free class properties here
         if (self->name) zstr_free(&self->name);
         if (self->config_path) zstr_free(&self->config_path);
+        sph_stage_clear(self);
         zhash_destroy(&self->actors);
         //  Free object itself
         free (self);
@@ -104,8 +105,8 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
             if ( conVal[i] == ',' ) break;
         }
 
-        char* output = (char *)malloc(i+1);//new char[i+1];
-        char* input = (char *)malloc(strlen(conVal)-i);
+        char output[256];// = (char *)malloc(i+1);//new char[i+1];
+        char input[256];// = (char *)malloc((strlen(conVal) + 4) - i);
         char type[64];// = malloc(64);
 
         char * pch;
@@ -130,8 +131,8 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         }
 
         con = zconfig_next(con);
-        free(output);
-        free(input);
+        //free(output);
+        //free(input);
     }
     return zhash_size(self->actors);
 }
@@ -159,7 +160,8 @@ sph_stage_clear(sph_stage_t* self)
     assert(self);
     for ( sphactor_t *actor = (sphactor_t *)zhash_first(self->actors); actor != NULL; actor = (sphactor_t *)zhash_next(self->actors) )
     {
-        sphactor_destroy(&actor);
+        if (actor)
+            sphactor_destroy(&actor);
     }
 
     zhash_destroy(&self->actors);
@@ -191,6 +193,49 @@ sph_stage_save_as(sph_stage_t *self, const char *config_path)
     self->config_path = strdup(config_path);
     return rc;
 }
+
+const zhash_t *
+sph_stage_actors(sph_stage_t *self)
+{
+    assert(self);
+    return self->actors;
+}
+
+sphactor_t *
+sph_stage_find_actor (sph_stage_t *self, const char *id)
+{
+    assert(self);
+    assert(self->actors);
+    sphactor_t *actor = (sphactor_t *)zhash_lookup(self->actors, id);
+    return actor;
+}
+
+int
+sph_stage_add_actor(sph_stage_t *self, sphactor_t *actor)
+{
+    assert(self);
+    assert(actor);
+
+    int rc = zhash_insert(self->actors, zuuid_str(sphactor_ask_uuid(actor)), actor);
+    return rc;
+}
+
+int
+sph_stage_remove_actor(sph_stage_t *self, const char *actor_id)
+{
+    assert(self);
+    assert(actor_id);
+
+    sphactor_t *actor = sph_stage_find_actor(self, actor_id);
+    if (actor)
+    {
+        zhash_delete(self->actors, actor_id);
+        sphactor_destroy(&actor);
+        return 0;
+    }
+    return -1;
+}
+
 
 //  --------------------------------------------------------------------------
 //  Self test of this class
@@ -251,10 +296,44 @@ sph_stage_test (bool verbose)
     sph_stage_t *stage = sph_stage_new("test");
     rc = sph_stage_cnf_load(stage, root );
     assert( rc == 2);
-    zconfig_destroy(&root);
-    sph_stage_clear(stage);
-    zclock_sleep(3000);
+    zclock_sleep(30);
+    rc = sph_stage_clear(stage);
+    assert( rc == 0);
     sph_stage_destroy(&stage);
+
+    zclock_sleep(30); // some time for cleanup
+
+    sph_stage_t *stage2 = sph_stage_new("test");
+    rc = sph_stage_cnf_load(stage2, root );
+    assert( rc == 2);
+    zclock_sleep(30);
+    sphactor_t *pulseact = sph_stage_find_actor(stage2, "2A7110DFC47C4DF19EB1D17E390CF86B");
+    assert(pulseact);
+    assert( streq( zuuid_str(sphactor_ask_uuid(pulseact)), "2A7110DFC47C4DF19EB1D17E390CF86B" ));
+    assert( streq( sphactor_ask_actor_type(pulseact), "Pulse"));
+    sph_stage_remove_actor( stage2, "2A7110DFC47C4DF19EB1D17E390CF86B" );
+    pulseact = sph_stage_find_actor(stage2, "2A7110DFC47C4DF19EB1D17E390CF86B");
+    assert(pulseact == NULL);
+    sph_stage_destroy(&stage2);
+    zconfig_destroy( &root );
+
+    sph_stage_t *stage3 = sph_stage_new("test_add");
+    assert(stage3);
+    sphactor_t *testact = sphactor_new_by_type("Log", NULL, NULL);
+    assert(testact);
+    rc = sph_stage_add_actor(stage3, testact);
+    assert(rc == 0);
+
+    const zhash_t *actors = sph_stage_actors(stage3);
+    assert( zhash_size((zhash_t *)actors) == 1);
+    const sphactor_t *act2 =  (const sphactor_t *)zhash_first((zhash_t *)actors);
+    assert( testact == (sphactor_t *)act2 );
+    rc = sph_stage_remove_actor(stage3, zuuid_str( sphactor_ask_uuid(testact)) );
+    assert( rc == 0 );
+    assert( zhash_size((zhash_t *)actors) == 0 );
+    sph_stage_clear(stage3);
+    sph_stage_destroy(&stage3);
+
     zsys_shutdown();
 
     //  @end

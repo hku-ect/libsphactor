@@ -34,5 +34,30 @@
         <return type = "integer"/>
     </method>
 
+    <method name = "actors">
+        Return the hash map of actors from the stage.
+        <return type = "zhash" mutable = "0" />
+    </method>
+
+    <method name = "find actor">
+        Find an actor by it's identifier (uuid). Returns a sphactor reference or NULL if not found.
+        Please note: if you want to destroy the actor it's best to use the remove_actor method of 
+        this class so it's also remove from the stage.
+        <argument name = "id" type = "string" />
+        <return type = "sphactor" />
+    </method>
+
+    <method name = "remove actor">
+        Remove an actor by it's identifier (uuid) and destroy it. Returns 0 if succesful -1 if not found.
+        <argument name = "id" type = "string" />
+        <return type = "integer" />
+    </method>
+
+    <method name = "add actor">
+        Add an actor to the stage. Returns 0 if succesful -1 if not found.
+        <argument name = "actor" type = "sphactor" />
+        <return type = "integer" />
+    </method>
+
 </class>
 
