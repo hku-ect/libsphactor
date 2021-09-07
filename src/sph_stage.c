@@ -206,7 +206,7 @@ sph_stage_find_actor (sph_stage_t *self, const char *id)
 {
     assert(self);
     assert(self->actors);
-    sphactor_t *actor = zhash_lookup(self->actors, id);
+    sphactor_t *actor = (sphactor_t *)zhash_lookup(self->actors, id);
     return actor;
 }
 
