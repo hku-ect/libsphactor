@@ -151,12 +151,12 @@ sphactor_load(const zconfig_t *config)
                     zconfig_t *name = zconfig_locate(data, "name");
                     if (name && streq(zconfig_value(name), cnfNme) )
                     {
-                        // match name the correct name
-                        /*zconfig_t *value = zconfig_locate(data, "value");
+                        // TODO: here's the value is set in the capability, this is not safe!!!
+                        zconfig_t *value = zconfig_locate(data, "value");
                         if ( value )
                         {
                             zconfig_set_value(value, "%s", cnfStr);
-                        }*/
+                        }
                         zconfig_t *zapic = zconfig_locate(data, "api_call");
                         if (zapic)
                         {

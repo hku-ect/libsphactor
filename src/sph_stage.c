@@ -186,7 +186,26 @@ sph_stage_save_as(sph_stage_t *self, const char *config_path)
     assert(self);
     assert(config_path);
     // TODO: create zconfig
-    zconfig_t* config = zconfig_new("root", NULL);
+    zconfig_t* config = sphactor_zconfig_new("root");
+    for (sphactor_t *it = (sphactor_t *)zhash_first(self->actors); it != NULL; it = zhash_next( self->actors ) )
+    {
+        zconfig_t* actorSection = sphactor_zconfig_append(it, config);
+
+        // Add custom actor data to section
+        //actor->SerializeActorData(actorSection);
+
+        zconfig_t* connections = zconfig_locate(config, "connections");
+        if ( connections == NULL ) {
+            connections = zconfig_new("connections", config);
+        }
+
+        for (char *c = zlist_first(sphactor_connections(it)); c != NULL; c = zlist_next(sphactor_connections(it)) )
+        {
+            zconfig_t* item = zconfig_new( "con", connections );
+            assert( item );
+            zconfig_set_value(item,"%s,%s,%s", sphactor_ask_endpoint(it), c, "OSC" );
+        }
+    }
     int rc = zconfig_save(config, config_path);
     assert(rc == 0);
     zstr_free(&self->config_path);
