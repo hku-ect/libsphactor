@@ -97,7 +97,7 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
     zconfig_t* connections = zconfig_locate((zconfig_t *)cnf, "connections");
     zconfig_t* con = zconfig_locate( connections, "con");
     while( con != NULL ) {
-        char* conVal = zconfig_value(con);
+        char* conVal = strdup(zconfig_value(con)); // strok modifies the string and this messes up the config so dup it
 
         // Parse comma separated connection string to get the two endpoints
         int i;
@@ -109,12 +109,14 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         char input[256];// = (char *)malloc((strlen(conVal) + 4) - i);
         char type[64];// = malloc(64);
 
-        char * pch;
-        pch = strtok (conVal,",");
+        char *pch = strtok (conVal, ",");
+        assert(pch);
         sprintf(output, "%s", pch);
         pch = strtok (NULL, ",");
+        assert(pch);
         sprintf(input, "%s", pch);
         pch = strtok(NULL, ",");
+        assert(pch);
         sprintf(type, "%s", pch);
 
         // Loop actors and find output actor
@@ -131,8 +133,7 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
         }
 
         con = zconfig_next(con);
-        //free(output);
-        //free(input);
+        free(conVal);
     }
     return zhash_size(self->actors);
 }
