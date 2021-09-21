@@ -506,16 +506,44 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     
     zconfig_t *curActor = zconfig_new("actor", sphactors);
     
-    zconfig_t *zuuid, *ztype, *zname, *zendpoint;
+    zconfig_t *zuuid, *ztype, *zname, *zendpoint, *xpos, *ypos;
     zuuid = zconfig_new("uuid", curActor);
     ztype = zconfig_new("type", curActor);
     zname = zconfig_new("name", curActor);
     zendpoint = zconfig_new("endpoint", curActor);
-    
+    xpos = zconfig_new("xpos", curActor);
+    ypos = zconfig_new("ypos", curActor);
+
     zconfig_set_value(zuuid, "%s", zuuid_str(sphactor_ask_uuid (self) ) );
     zconfig_set_value(ztype, "%s", sphactor_ask_actor_type(self) );
     zconfig_set_value(zname, "%s", sphactor_ask_name(self) );
     zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self) );
+    zconfig_set_value(xpos, "%f", sphactor_position_x(self) );
+    zconfig_set_value(ypos, "%f", sphactor_position_y(self) );
+
+    // Parse current state of data capabilities
+    zconfig_t *cap = sphactor_ask_capability(self);
+    if ( cap ) {
+        zconfig_t *root = zconfig_locate(cap, "capabilities");
+        if ( root ) {
+            zconfig_t *data = zconfig_locate(root, "data");
+            while ( data ) {
+                zconfig_t *name = zconfig_locate(data,"name");
+                zconfig_t *value = zconfig_locate(data,"value");
+
+                if (value) // only store if there's a value
+                {
+                    char *nameStr = zconfig_value(name);
+                    char *valueStr = zconfig_value(value);
+
+                    zconfig_t *stored = zconfig_new(nameStr, curActor);
+                    zconfig_set_value(stored, "%s", valueStr);
+                }
+
+                data = zconfig_next(data);
+            }
+        }
+    }
 
     return curActor;
 }
