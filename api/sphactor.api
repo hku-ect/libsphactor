@@ -164,18 +164,18 @@
     
     <method name = "set position">
         Set the stage position of the actor.
-        <argument name = "x" type = "integer" />
-        <argument name = "y" type = "integer" />
+        <argument name = "x" type = "real" />
+        <argument name = "y" type = "real" />
     </method>
 
     <method name = "position x">
         Return the X position of the actor.
-        <return type = "integer" />
+        <return type = "real" />
     </method>
 
     <method name = "position y">
         Return the Y position of the actor.
-        <return type = "integer" />
+        <return type = "real" />
     </method>
 
     <method name = "zconfig new" singleton="1">

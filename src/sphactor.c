@@ -34,8 +34,8 @@ struct _sphactor_t {
     char    *endpoint;          //  Copy of our actor's endpoint
     char    *type;              //  Copy of our actor's type name
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
-    int     posx;               //  XY position is used when visualising actors
-    int     posy;
+    float   posx;               //  XY position is used when visualising actors
+    float   posy;
     sphactor_report_t *latest_report;   //  The latest report acquired from the actor
     sphactor_actor_t  *_sph_act;        //  pointer to the actor in the thread, internal use only!
 };
@@ -77,6 +77,8 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     self->type = NULL;
     self->endpoint = NULL;
     self->subscriptions = zlist_new();
+    self->posx = 0;
+    self->posy = 0;
     zlist_comparefn (self->subscriptions, (zlist_compare_fn *) strcmp);
     zlist_autofree (self->subscriptions); // only works for char *
     return self;
@@ -127,7 +129,7 @@ sphactor_load(const zconfig_t *config)
     assert(new_actor);
 
     // set position
-    sphactor_set_position( new_actor, atoi(xposStr), atoi(yposStr) );
+    sphactor_set_position( new_actor, atof(xposStr), atof(yposStr) );
     //  TODO: we don't handle the endpoint (yet)
 
     //  We're assuming the ypos is the last thing added by the sphactor serialization
@@ -466,21 +468,21 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
 }
 
 void
-sphactor_set_position (sphactor_t *self, int x, int y)
+sphactor_set_position (sphactor_t *self, float x, float y)
 {
     assert (self);
     self->posx = x;
     self->posy = y;
 }
 
-int
+float
 sphactor_position_x (sphactor_t *self)
 {
     assert (self);
     return self->posx;
 }
 
-int
+float
 sphactor_position_y (sphactor_t *self)
 {
     assert (self);
@@ -518,8 +520,8 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zconfig_set_value(ztype, "%s", sphactor_ask_actor_type(self) );
     zconfig_set_value(zname, "%s", sphactor_ask_name(self) );
     zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self) );
-    zconfig_set_value(xpos, "%f", sphactor_position_x(self) );
-    zconfig_set_value(ypos, "%f", sphactor_position_y(self) );
+    zconfig_set_value(xpos, "%f", (float)sphactor_position_x(self) );
+    zconfig_set_value(ypos, "%f", (float)sphactor_position_y(self) );
 
     // Parse current state of data capabilities
     zconfig_t *cap = sphactor_ask_capability(self);
@@ -895,9 +897,9 @@ sphactor_test (bool verbose)
     const zuuid_t *uuidtest = sphactor_ask_uuid(self);
     assert(uuidtest);
     // position test
-    sphactor_set_position(self, 23, 24);
-    assert( sphactor_position_x(self) == 23 );
-    assert( sphactor_position_y(self) == 24 );
+    sphactor_set_position(self, 23.f, 24.f);
+    assert( sphactor_position_x(self) == 23.f );
+    assert( sphactor_position_y(self) == 24.f );
     //  name should be the first 6 chars from the uuid
     const char *name = sphactor_ask_name( self );
     char *name2 = (char *) zmalloc (7);

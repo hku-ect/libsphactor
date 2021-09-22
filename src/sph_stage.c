@@ -171,22 +171,9 @@ sph_stage_clear(sph_stage_t* self)
     return 0;
 }
 
-int
-sph_stage_save(sph_stage_t *self)
+static zconfig_t *
+s_sph_stage_save_zconfig(sph_stage_t *self)
 {
-    assert(self);
-    assert(self->config_path);
-    // TODO: create zconfig
-    zconfig_t* config = zconfig_new("root", NULL);
-    return zconfig_save(config, self->config_path);
-}
-
-int
-sph_stage_save_as(sph_stage_t *self, const char *config_path)
-{
-    assert(self);
-    assert(config_path);
-    // TODO: create zconfig
     zconfig_t* config = sphactor_zconfig_new("root");
     for (sphactor_t *it = (sphactor_t *)zhash_first(self->actors); it != NULL; it = zhash_next( self->actors ) )
     {
@@ -207,6 +194,23 @@ sph_stage_save_as(sph_stage_t *self, const char *config_path)
             zconfig_set_value(item,"%s,%s,%s", sphactor_ask_endpoint(it), c, "OSC" );
         }
     }
+    return config;
+}
+
+int
+sph_stage_save(sph_stage_t *self)
+{
+    assert(self);
+    assert(self->config_path);
+    return sph_stage_save_as(self, self->config_path);
+}
+
+int
+sph_stage_save_as(sph_stage_t *self, const char *config_path)
+{
+    assert(self);
+    assert(config_path);
+    zconfig_t* config = s_sph_stage_save_zconfig(self);
     int rc = zconfig_save(config, config_path);
     assert(rc == 0);
     zstr_free(&self->config_path);
@@ -285,7 +289,7 @@ sph_stage_test (bool verbose)
     assert (self);
     sph_stage_destroy (&self);
 
-    zconfig_t *root = zconfig_str_load (
+    char *cnfstr =
     "actors\n"
     "    actor\n"
     "        uuid = \"7B21D87CB6B04FC5801A5B396269876D\"\n"
@@ -305,14 +309,15 @@ sph_stage_test (bool verbose)
     "        someFloat = \"1.0\"\n"
     "        someText = \"Hello world!\"\n"
     "connections\n"
-    "    con = \"inproc://2A7110DFC47C4DF19EB1D17E390CF86B,inproc://7B21D87CB6B04FC5801A5B396269876D,OSC\"\n"
+    "    con = \"inproc://2A7110DFC47C4DF19EB1D17E390CF86B,inproc://7B21D87CB6B04FC5801A5B396269876D,OSC\"\n";
     ///"    con = \"inproc://7B21D87CB6B04FC5801A5B396269876D,inproc://8FADA7E8835E42D5AF85FC75F4A9B70E,OSC\"\n"
-    );
+    zconfig_t *root = zconfig_str_load (cnfstr);
     int rc = sphactor_register("Log", sph_stock_log_actor, NULL, NULL);
     assert(rc == 0);
     rc = sphactor_register("Pulse", sph_stock_pulse_actor, NULL, NULL);
     assert(rc == 0);
 
+    // test amount of loaded actors returned
     sph_stage_t *stage = sph_stage_new("test");
     rc = sph_stage_cnf_load(stage, root );
     assert( rc == 2);
@@ -323,6 +328,7 @@ sph_stage_test (bool verbose)
 
     zclock_sleep(30); // some time for cleanup
 
+    // some stage tests
     sph_stage_t *stage2 = sph_stage_new("test");
     rc = sph_stage_cnf_load(stage2, root );
     assert( rc == 2);
@@ -331,6 +337,47 @@ sph_stage_test (bool verbose)
     assert(pulseact);
     assert( streq( zuuid_str(sphactor_ask_uuid(pulseact)), "2A7110DFC47C4DF19EB1D17E390CF86B" ));
     assert( streq( sphactor_ask_actor_type(pulseact), "Pulse"));
+    // save stage
+    zconfig_t *testsave = s_sph_stage_save_zconfig(stage2);
+    assert(testsave);
+    //char *testsavestr = zconfig_str_save(testsave);
+    //assert(streq(cnfstr, testsavestr));
+    zconfig_t *saveactors = zconfig_locate(testsave, "actors/actor");
+    assert(saveactors);
+    zconfig_t *testkey = zconfig_locate(saveactors, "uuid");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "type");
+    assert(testkey);
+    assert(streq(zconfig_value(testkey), "Pulse") || streq(zconfig_value(testkey), "Log") );
+    testkey = zconfig_locate(saveactors, "name");
+    assert(testkey);
+    assert(streq(zconfig_value(testkey), "8FADA7") || streq(zconfig_value(testkey), "2A7110") );
+    testkey = zconfig_locate(saveactors, "endpoint");
+    assert(testkey);
+    assert(streq(zconfig_value(testkey), "inproc://2A7110DFC47C4DF19EB1D17E390CF86B") || streq(zconfig_value(testkey), "inproc://8FADA7E8835E42D5AF85FC75F4A9B70E") );
+    testkey = zconfig_locate(saveactors, "xpos");
+    assert(testkey);
+    assert(streq(zconfig_value(testkey), "502.500000") || streq(zconfig_value(testkey), "34.500000") );
+    testkey = zconfig_locate(saveactors, "ypos");
+    assert(testkey);
+    assert(streq(zconfig_value(testkey), "312.000000") || streq(zconfig_value(testkey), "426.000000") );
+    saveactors = zconfig_next(saveactors);
+    assert(saveactors);
+    testkey = zconfig_locate(saveactors, "uuid");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "type");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "name");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "endpoint");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "xpos");
+    assert(testkey);
+    testkey = zconfig_locate(saveactors, "ypos");
+    assert(testkey);
+    zconfig_destroy(&testsave);
+
+    // remove test
     sph_stage_remove_actor( stage2, "2A7110DFC47C4DF19EB1D17E390CF86B" );
     pulseact = sph_stage_find_actor(stage2, "2A7110DFC47C4DF19EB1D17E390CF86B");
     assert(pulseact == NULL);
