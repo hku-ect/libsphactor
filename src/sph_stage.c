@@ -175,7 +175,7 @@ static zconfig_t *
 s_sph_stage_save_zconfig(sph_stage_t *self)
 {
     zconfig_t* config = sphactor_zconfig_new("root");
-    for (sphactor_t *it = (sphactor_t *)zhash_first(self->actors); it != NULL; it = zhash_next( self->actors ) )
+    for (sphactor_t *it = (sphactor_t *)zhash_first(self->actors); it != NULL; it = (sphactor_t *)zhash_next( self->actors ) )
     {
         zconfig_t* actorSection = sphactor_zconfig_append(it, config);
 
@@ -187,7 +187,7 @@ s_sph_stage_save_zconfig(sph_stage_t *self)
             connections = zconfig_new("connections", config);
         }
 
-        for (char *c = zlist_first(sphactor_connections(it)); c != NULL; c = zlist_next(sphactor_connections(it)) )
+        for (char *c = (char *)zlist_first(sphactor_connections(it)); c != (char *)NULL; c = (char *)zlist_next(sphactor_connections(it)) )
         {
             zconfig_t* item = zconfig_new( "con", connections );
             assert( item );
