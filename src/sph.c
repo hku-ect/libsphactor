@@ -139,7 +139,7 @@ int main (int argc, char *argv [])
 
         while (!zsys_is_interrupted())
         {
-            zsock_t *ready = zpoller_wait(poller, 100 * ZMQ_POLL_MSEC);
+            zsock_t *ready = (zsock_t *)zpoller_wait(poller, 100 * ZMQ_POLL_MSEC);
             if (ready == NULL) continue; // timeout
             else if  (ready == act_sock)
             {
