@@ -156,14 +156,14 @@ SPHACTOR_EXPORT int
 
 //  Set the stage position of the actor.
 SPHACTOR_EXPORT void
-    sphactor_set_position (sphactor_t *self, int x, int y);
+    sphactor_set_position (sphactor_t *self, float x, float y);
 
 //  Return the X position of the actor.
-SPHACTOR_EXPORT int
+SPHACTOR_EXPORT float
     sphactor_position_x (sphactor_t *self);
 
 //  Return the Y position of the actor.
-SPHACTOR_EXPORT int
+SPHACTOR_EXPORT float
     sphactor_position_y (sphactor_t *self);
 
 //  Create new zconfig
