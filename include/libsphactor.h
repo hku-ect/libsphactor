@@ -27,4 +27,10 @@ typedef struct {
     const char* name; // name for the actor (NULL for auto generated)
 } sphactor_shim_t;
 
+typedef struct  {
+    sphactor_handler_fn *handler;
+    sphactor_constructor_fn *constructor;
+    void *constructor_args; // can be NULL
+} sphactor_funcs_t;
+
 #endif

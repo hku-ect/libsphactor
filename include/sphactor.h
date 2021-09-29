@@ -68,7 +68,7 @@ SPHACTOR_EXPORT int
     sphactor_unregister (const char *actor_type);
 
 //
-SPHACTOR_EXPORT zlist_t *
+SPHACTOR_EXPORT zhash_t *
     sphactor_get_registered (void);
 
 //
