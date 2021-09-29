@@ -79,6 +79,54 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 }
 
 sphactor_t *
+sphactor_new_proc(const char *type, const char *name, zuuid_t *uuid)
+{
+    zproc_t *proc = zproc_new();
+    assert(proc);
+    //zproc_set_verbose(proc, true);
+
+    zproc_set_argsx(proc, "./sph", "--actor", "Log", NULL);
+    zproc_set_stdout (proc, NULL);
+    zproc_set_stderr (proc, NULL);
+    zproc_set_stdin (proc, NULL);
+
+    int r = zproc_run (proc);
+    zclock_sleep (100); // to let actor start the process
+    assert (r != -1);
+    zsys_info("pid is: %i", zproc_pid(proc));
+    zclock_sleep(1000);
+
+    zsys_info("here we go");
+    zsock_t *ctrlsock = zsock_new( ZMQ_DEALER );
+    assert(ctrlsock);
+    int rc = zsock_bind(ctrlsock, "tcp://*:4321");
+    assert(rc != -1);
+    zsock_wait (ctrlsock);
+
+    //zstr_sendm(ctrlsock, "MEPRC");
+    zstr_send(ctrlsock, "UUID");
+    zuuid_t *uid = zuuid_new();
+    rc = zsock_recv( ctrlsock, "U", &uid );
+    assert(rc != -1);
+    zsys_info("proc uuid: %s", zuuid_str(uid) );
+
+    zstr_send(ctrlsock, "ENDPOINT");
+    char *e = zstr_recv( ctrlsock );
+    zsys_info("proc endpoint: %s", e );
+    zstr_free(&e);
+    zclock_sleep (1000); // to let actor start the process
+
+    if (zstr_send (ctrlsock, "$TERM") == 0)
+        zsock_wait (ctrlsock);
+
+    zsock_destroy(&ctrlsock);
+    //zproc_kill(proc, 15);
+    zproc_destroy(&proc);
+
+    return NULL;
+}
+
+sphactor_t *
 sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
 {
     assert(actors_reg); // make sure something has ever been registered
@@ -625,14 +673,6 @@ zhash_t *
 sphactor_get_registered ()
 {
     return actors_reg;
-    if ( actors_reg == NULL ) actors_reg = zhash_new();
-    
-    if ( actors_keys != NULL ) {
-        zlist_destroy(&actors_keys);
-    }
-    
-    actors_keys = zhash_keys(actors_reg);
-    return actors_keys;
 }
 
 //
@@ -856,6 +896,10 @@ sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
 
+    sphactor_t *proca = sphactor_new_proc("Log");
+    assert(proca == NULL);
+
+    return;
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor, NULL, NULL);
