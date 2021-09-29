@@ -25,6 +25,9 @@
 #include <stdlib.h>
 //#include <dlfcn.h>
 
+//  (forward declare)
+void sphactor_actor_run(zsock_t *pipe, void *args);
+
 static int
 print_help()
 {
@@ -96,6 +99,31 @@ s_self_switch (zsock_t *input, zsock_t *output)
     }
 }
 
+static int
+s_run_actor_by_type(const char *actor_type, zsock_t *pipe, const char *name, zuuid_t *uuid)
+{
+    zhash_t *actors_reg = sphactor_get_registered();
+    assert(actors_reg); // make sure something has ever been registered
+    sphactor_funcs_t *funcs = (sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
+    if ( funcs == NULL )
+    {
+        zsys_error("%s type does not exist as a registered actor type", actor_type);
+        return -1;
+    }
+    // run constructor if any
+    void *instance = NULL;
+    if ( funcs->constructor )
+        instance = funcs->constructor(funcs->constructor_args);
+
+    sphactor_shim_t shim = { funcs->handler, instance, uuid, name };
+    // this will block
+    sphactor_actor_run(pipe, &shim);
+    //sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
+    //assert( self );
+    //sphactor_ask_set_actor_type(self, actor_type);
+
+    //sphactor_actor_t *self = sphactor_actor_new(pipe, args);
+}
 
 int main (int argc, char *argv [])
 {
@@ -122,37 +150,15 @@ int main (int argc, char *argv [])
     const char *act = zargs_get(args, "--actor");
     if ( act )
     {
-        // run single actor with proxy
-
-        // try to create an actor from given actor
-        assert(act);
-        sphactor_t *actor = sphactor_new_by_type(act, "Process Actor", NULL);
-        assert(actor);
-        zsock_t *act_sock = sphactor_socket(actor);
-
-        zsock_t *ctrlsock = zsock_new_pull("tcp://*:*");
+        zsock_t *ctrlsock = zsock_new(ZMQ_DEALER);
         assert(ctrlsock);
+        //zsock_set_identity(ctrlsock, "MEPCR");
+        rc = zsock_connect(ctrlsock, "tcp://127.0.0.1:4321");
+        assert( rc != -1);
         const char *ctrlendp = zsock_endpoint(ctrlsock);
 
-        zpoller_t *poller = zpoller_new (act_sock, ctrlsock, NULL);
-        zpoller_set_nonstop(poller, true);
-
-        while (!zsys_is_interrupted())
-        {
-            zsock_t *ready = (zsock_t *)zpoller_wait(poller, 100 * ZMQ_POLL_MSEC);
-            if (ready == NULL) continue; // timeout
-            else if  (ready == act_sock)
-            {
-                s_self_switch(act_sock, ctrlsock);
-            }
-            else
-            {
-                assert (ready == ctrlsock);
-                s_self_switch(ctrlsock, act_sock);
-            }
-        }
-        zpoller_destroy(&poller);
-        sphactor_destroy(&actor);
+        rc = s_run_actor_by_type(act, ctrlsock, NULL, NULL);
+        zsock_signal (ctrlsock, 0);
         zsock_destroy(&ctrlsock);
     }
     else
