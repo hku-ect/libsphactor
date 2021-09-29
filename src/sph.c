@@ -116,13 +116,9 @@ s_run_actor_by_type(const char *actor_type, zsock_t *pipe, const char *name, zuu
         instance = funcs->constructor(funcs->constructor_args);
 
     sphactor_shim_t shim = { funcs->handler, instance, uuid, name };
-    // this will block
+    // this will block until finished
     sphactor_actor_run(pipe, &shim);
-    //sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
-    //assert( self );
-    //sphactor_ask_set_actor_type(self, actor_type);
-
-    //sphactor_actor_t *self = sphactor_actor_new(pipe, args);
+    return 0;
 }
 
 int main (int argc, char *argv [])
@@ -163,8 +159,6 @@ int main (int argc, char *argv [])
     }
     else
     {
-
-        //  Insert main code here
         if (verbose)
             zsys_info ("sph - ");
 
