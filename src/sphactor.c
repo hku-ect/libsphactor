@@ -283,6 +283,8 @@ sphactor_ask_set_actor_type (sphactor_t *self, const char *actor_type)
 {
     assert (self);
     assert (actor_type);
+    if (self->type)
+        zstr_free(&self->type);
     self->type = strdup(actor_type);  // cache immediatelly
     zstr_sendx (self->actor, "SET TYPE", actor_type, NULL);
 }
