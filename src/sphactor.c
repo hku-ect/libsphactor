@@ -794,6 +794,7 @@ api_sphactor(sphactor_event_t *ev, void *args)
     {
         char *tmp = zmsg_popstr(ev->msg);
         zsys_info("Api actor %s also says: %s", ev->name, tmp);
+        assert(streq(tmp, "123"));
         zstr_free(&tmp);
     }
     zstr_free(&cmd);
@@ -898,10 +899,6 @@ sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
 
-    sphactor_t *proca = sphactor_new_proc("Log");
-    assert(proca == NULL);
-
-    return;
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor, NULL, NULL);
@@ -1258,9 +1255,15 @@ sphactor_test (bool verbose)
     assert( streq(sphactor_ask_name(loadedactor), "8FADA7") );
     assert( streq(sphactor_ask_actor_type(loadedactor), "Log") );
     assert( streq(zuuid_str(sphactor_ask_uuid(loadedactor)), "7B21D87CB6B04FC5801A5B396269876D" ) );
+    assert( fabs(sphactor_position_x(loadedactor)-502.5) < FLT_EPSILON );
+    assert( fabs(sphactor_position_y(loadedactor)-312.0) < FLT_EPSILON );
     sphactor_destroy(&loadedactor);
     sphactor_unregister("Log");
     zconfig_destroy(&root);
+
+    // sphactor_proc test
+    //sphactor_t *proca = sphactor_new_proc("Log", NULL, NULL);
+    //assert(proca == NULL);
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end
