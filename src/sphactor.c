@@ -44,12 +44,6 @@ struct _sphactor_t {
 static zhash_t *actors_reg = NULL;
 static zlist_t *actors_keys = NULL;
 
-typedef struct  {
-    sphactor_handler_fn *handler;
-    sphactor_constructor_fn *constructor;
-    void *constructor_args; // can be NULL
-} _sphactor_funcs_t;
-
 //  (forward declare)
 void sphactor_actor_run(zsock_t *pipe, void *args);
 
@@ -85,10 +79,58 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
 }
 
 sphactor_t *
+sphactor_new_proc(const char *type, const char *name, zuuid_t *uuid)
+{
+    zproc_t *proc = zproc_new();
+    assert(proc);
+    //zproc_set_verbose(proc, true);
+
+    zproc_set_argsx(proc, "./sph", "--actor", "Log", NULL);
+    zproc_set_stdout (proc, NULL);
+    zproc_set_stderr (proc, NULL);
+    zproc_set_stdin (proc, NULL);
+
+    int r = zproc_run (proc);
+    zclock_sleep (100); // to let actor start the process
+    assert (r != -1);
+    zsys_info("pid is: %i", zproc_pid(proc));
+    zclock_sleep(1000);
+
+    zsys_info("here we go");
+    zsock_t *ctrlsock = zsock_new( ZMQ_DEALER );
+    assert(ctrlsock);
+    int rc = zsock_bind(ctrlsock, "tcp://*:4321");
+    assert(rc != -1);
+    zsock_wait (ctrlsock);
+
+    //zstr_sendm(ctrlsock, "MEPRC");
+    zstr_send(ctrlsock, "UUID");
+    zuuid_t *uid = zuuid_new();
+    rc = zsock_recv( ctrlsock, "U", &uid );
+    assert(rc != -1);
+    zsys_info("proc uuid: %s", zuuid_str(uid) );
+
+    zstr_send(ctrlsock, "ENDPOINT");
+    char *e = zstr_recv( ctrlsock );
+    zsys_info("proc endpoint: %s", e );
+    zstr_free(&e);
+    zclock_sleep (1000); // to let actor start the process
+
+    if (zstr_send (ctrlsock, "$TERM") == 0)
+        zsock_wait (ctrlsock);
+
+    zsock_destroy(&ctrlsock);
+    //zproc_kill(proc, 15);
+    zproc_destroy(&proc);
+
+    return NULL;
+}
+
+sphactor_t *
 sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
 {
     assert(actors_reg); // make sure something has ever been registered
-    _sphactor_funcs_t *funcs = (_sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
+    sphactor_funcs_t *funcs = (sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
     if ( funcs == NULL )
     {
         zsys_error("%s type does not exist as a registered actor type", actor_type);
@@ -592,7 +634,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_
         return -1;
     }
 
-    _sphactor_funcs_t *funcs = (_sphactor_funcs_t *) zmalloc (sizeof (_sphactor_funcs_t));
+    sphactor_funcs_t *funcs = (sphactor_funcs_t *) zmalloc (sizeof (sphactor_funcs_t));
     assert (funcs);
     funcs->handler = handler;
     funcs->constructor = constructor; // can be NULL
@@ -608,7 +650,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_
 int
 sphactor_unregister( const char *actor_type)
 {
-    _sphactor_funcs_t *item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, actor_type);
+    sphactor_funcs_t *item = (sphactor_funcs_t*)zhash_lookup(actors_reg, actor_type);
     if ( item == NULL )
     {
         zsys_error("no %s type is found", actor_type);
@@ -627,17 +669,10 @@ sphactor_unregister( const char *actor_type)
 //
 //  Returns keys list of registered actor types (can be empty if no actors were registered)
 //   Implementations are expected to register themselves prior to requesting this list.
-zlist_t *
+zhash_t *
 sphactor_get_registered ()
 {
-    if ( actors_reg == NULL ) actors_reg = zhash_new();
-    
-    if ( actors_keys != NULL ) {
-        zlist_destroy(&actors_keys);
-    }
-    
-    actors_keys = zhash_keys(actors_reg);
-    return actors_keys;
+    return actors_reg;
 }
 
 //
@@ -861,19 +896,23 @@ sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
 
+    sphactor_t *proca = sphactor_new_proc("Log");
+    assert(proca == NULL);
+
+    return;
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor, NULL, NULL);
-    _sphactor_funcs_t *item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
+    sphactor_funcs_t *item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert( item->handler == &hello_sphactor );
     sphactor_unregister("hello");
-    item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
+    item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
     // register and construction test
     sphactor_register("test", regtest_handler, regtest_constructor, "test");
-    item = (_sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
+    item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
     assert(item->constructor);

@@ -25,6 +25,9 @@
 #include <stdlib.h>
 //#include <dlfcn.h>
 
+//  (forward declare)
+void sphactor_actor_run(zsock_t *pipe, void *args);
+
 static int
 print_help()
 {
@@ -68,14 +71,64 @@ print_help()
     //exit(EXIT_SUCCESS);
 }*/
 
+static void
+s_self_switch (zsock_t *input, zsock_t *output)
+{
+    //  We use the low-level libzmq API for best performance
+    void *zmq_input = zsock_resolve (input);
+    void *zmq_output = zsock_resolve (output);
+    //void *zmq_capture = self->capture? zsock_resolve (self->capture): NULL;
+
+    zmq_msg_t msg;
+    zmq_msg_init (&msg);
+    while (true) {
+        if (zmq_recvmsg (zmq_input, &msg, ZMQ_DONTWAIT) == -1)
+            break;      //  Presumably EAGAIN
+        int send_flags = zsock_rcvmore (input)? ZMQ_SNDMORE: 0;
+        /*if (zmq_capture) {
+            zmq_msg_t dup;
+            zmq_msg_init (&dup);
+            zmq_msg_copy (&dup, &msg);
+            if (zmq_sendmsg (zmq_capture, &dup, send_flags) == -1)
+                zmq_msg_close (&dup);
+        }*/
+        if (zmq_sendmsg (zmq_output, &msg, send_flags) == -1) {
+            zmq_msg_close (&msg);
+            break;
+        }
+    }
+}
+
+static int
+s_run_actor_by_type(const char *actor_type, zsock_t *pipe, const char *name, zuuid_t *uuid)
+{
+    zhash_t *actors_reg = sphactor_get_registered();
+    assert(actors_reg); // make sure something has ever been registered
+    sphactor_funcs_t *funcs = (sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type);
+    if ( funcs == NULL )
+    {
+        zsys_error("%s type does not exist as a registered actor type", actor_type);
+        return -1;
+    }
+    // run constructor if any
+    void *instance = NULL;
+    if ( funcs->constructor )
+        instance = funcs->constructor(funcs->constructor_args);
+
+    sphactor_shim_t shim = { funcs->handler, instance, uuid, name };
+    // this will block until finished
+    sphactor_actor_run(pipe, &shim);
+    return 0;
+}
+
 int main (int argc, char *argv [])
 {
     bool verbose = false;
     zargs_t *args = zargs_new(argc, argv);
     assert(args);
     zsys_init();
-    if ( zargs_arguments(args) == 0 )
-        return print_help();
+    //if ( zargs_arguments(args) == 0 )
+    //    return print_help();
 
     if ( zargs_hasx (args, "--help", "-h", NULL) )
         return print_help();
@@ -83,27 +136,46 @@ int main (int argc, char *argv [])
     if (zargs_hasx(args, "--verbose", "-v", NULL) )
         verbose = true;
 
-    //  Insert main code here
-    if (verbose)
-        zsys_info ("sph - ");
-
     //register_dyn_libs("bla");
     // register stock actors
     sphactor_register( "Log", &sph_stock_log_actor, NULL, NULL );
     sphactor_register( "Count", &sph_stock_count_actor, NULL, NULL );
     sphactor_register( "Pulse", &sph_stock_pulse_actor, NULL, NULL );
 
-    const char *conffile = zargs_first(args);
-
-    sph_stage_t *stage = sph_stage_new("clistage");
-    sph_stage_load(stage, conffile);
-
-    while (!zsys_interrupted)
+    int rc = 0;
+    const char *act = zargs_get(args, "--actor");
+    if ( act )
     {
-        zclock_sleep(300);
+        zsock_t *ctrlsock = zsock_new(ZMQ_DEALER);
+        assert(ctrlsock);
+        //zsock_set_identity(ctrlsock, "MEPCR");
+        rc = zsock_connect(ctrlsock, "tcp://127.0.0.1:4321");
+        assert( rc != -1);
+        const char *ctrlendp = zsock_endpoint(ctrlsock);
+
+        rc = s_run_actor_by_type(act, ctrlsock, NULL, NULL);
+        zsock_signal (ctrlsock, 0);
+        zsock_destroy(&ctrlsock);
     }
-    sph_stage_clear(stage);
-    zsys_info("EXIT");
-    zargs_destroy(&args);
-    return 0;
+    else
+    {
+        if (verbose)
+            zsys_info ("sph - ");
+
+        const char *conffile = zargs_first(args);
+
+        sph_stage_t *stage = sph_stage_new("clistage");
+        sph_stage_load(stage, conffile);
+
+        while (!zsys_interrupted)
+        {
+            zclock_sleep(300);
+        }
+        sph_stage_clear(stage);
+        zsys_info("EXIT");
+        zargs_destroy(&args);
+    }
+
+    sphactor_dispose();
+    return rc;
 }

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ $default-branch ]
+    branches: [ master ]
   pull_request:
-    branches: [ $default-branch ]
+    branches: [ master ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -25,12 +25,18 @@ jobs:
       run: |
         git clone https://github.com/zeromq/libzmq.git
         cd libzmq
-        ./autogen.sh && ./configure && make && sudo make install
+        ./autogen.sh
+        ./configure
+        make
+        sudo make install
     - name: CZMQ Dep
       run: |
         git clone https://github.com/zeromq/czmq.git
         cd czmq
-        ./autogen.sh && ./configure && make && sudo make install
+        ./autogen.sh
+        ./configure
+        make
+        sudo make install
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type

@@ -31,7 +31,7 @@
     </method>
 
     <method name = "get registered" singleton = "1">
-        <return type = "zlist"/>
+        <return type = "zhash"/>
     </method>
 
     <method name = "dispose" singleton = "1">
