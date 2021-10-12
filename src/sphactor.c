@@ -281,6 +281,7 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
         return -1;
     self->capability = capability;
     zconfig_t *capitem = zconfig_locate(self->capability, "capabilities/data");
+    int rc = -1;
     while (capitem != NULL)
     {
         zconfig_t* name = zconfig_locate(capitem, "name");
@@ -291,16 +292,17 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
         {
             zconfig_t *zapiv = zconfig_locate(capitem, "api_value");
             if (zapiv)
-                sphactor_ask_api(self, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
+                rc = sphactor_ask_api(self, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
             else // no api value so send default
-                sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
+                rc = sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
 
         }
         else
-            sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
+            rc = sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
 
         capitem = zconfig_next(capitem);
     }
+    return rc;
  }
 
 // caller does not own the uuid!
