@@ -278,7 +278,10 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
     assert(self);
     assert(capability);
     if (self->capability)
+    {
+        zconfig_destroy(&capability);
         return -1;
+    }
     self->capability = capability;
     zconfig_t *capitem = zconfig_locate(self->capability, "capabilities/data");
     int rc = -1;
