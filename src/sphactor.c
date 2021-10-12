@@ -1285,6 +1285,13 @@ cap: {
     //  get actor config
     zconfig_t *actcnf = sphactor_save(capact2, NULL);
     assert(actcnf);
+    zconfig_t *val = zconfig_locate(actcnf, "rate");
+    assert( streq(zconfig_value(val), "60"));
+    val = zconfig_locate(actcnf, "someFloat");
+    assert( streq(zconfig_value(val), "1.0"));
+    val = zconfig_locate(actcnf, "someText");
+    assert( streq(zconfig_value(val), "Hello world!"));
+
     //  api calls based on capability
     sphactor_destroy(&capact2);
 }
