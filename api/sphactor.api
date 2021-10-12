@@ -62,6 +62,23 @@
         Destructor, destroys a Sphactor instance. 
     </destructor>
 
+    <method name = "capability">
+        Return the capability of this actor. Returns NULL if there is no capability
+        <return type = "zconfig" />
+    </method>
+
+    <method name = "set capability">
+        Set the capability of this actor. Returns 0 on succes -1 if there already is a capability..
+        <argument name = "capability" type = "zconfig" />
+        <return type = "integer" />
+    </method>
+
+    <method name = "save">
+        Create a configuration for this actor
+        <argument name = "parent" type = "zconfig" />
+        <return type = "zconfig" /> 
+    </method>
+
     <method name = "ask uuid">
         Return our sphactor's UUID string, after successful initialization
         <return type = "zuuid" />

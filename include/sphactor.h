@@ -75,6 +75,18 @@ SPHACTOR_EXPORT zhash_t *
 SPHACTOR_EXPORT void
     sphactor_dispose (void);
 
+//  Return the capability of this actor. Returns NULL if there is no capability
+SPHACTOR_EXPORT zconfig_t *
+    sphactor_capability (sphactor_t *self);
+
+//  Set the capability of this actor. Returns 0 on succes -1 if there already is a capability..
+SPHACTOR_EXPORT int
+    sphactor_set_capability (sphactor_t *self, zconfig_t *capability);
+
+//  Create a configuration for this actor
+SPHACTOR_EXPORT zconfig_t *
+    sphactor_save (sphactor_t *self, zconfig_t *parent);
+
 //  Return our sphactor's UUID string, after successful initialization
 SPHACTOR_EXPORT zuuid_t *
     sphactor_ask_uuid (sphactor_t *self);
