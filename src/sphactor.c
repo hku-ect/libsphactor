@@ -572,7 +572,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
 
     if (rc == 0)
     {
-        zhash_update(self->values_cache, api_call, value);
+        zhash_update(self->values_cache, api_call, (void *)value);
     }
 
     return rc;
@@ -1027,7 +1027,6 @@ void
 sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
-    goto cap;
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor, NULL, NULL);
@@ -1324,7 +1323,7 @@ sphactor_test (bool verbose)
     
     zclock_sleep(10);
     sphactor_destroy(&reportact);
-cap: {
+
     // sphactor capability test
     sphactor_t *capact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert(capact);
@@ -1336,13 +1335,13 @@ cap: {
     // sphactor capability test
     sphactor_t *capact2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
     assert(capact2);
-    int rc = sphactor_set_capability(capact2, zconfig_str_load(capability_string));
+    rc = sphactor_set_capability(capact2, zconfig_str_load(capability_string));
     assert(rc == 0);
     zconfig_t *cap2 = sphactor_capability(capact2);
     // by default the capability is a null pointer
     assert(cap2);
     // set capability again, should fail
-    rc = sphactor_set_capability(capact2, capability_string);
+    rc = sphactor_set_capability(capact2, zconfig_load(capability_string));
     assert( rc == -1);
     //  get actor config
     zconfig_t *actcnf = sphactor_save(capact2, NULL);
@@ -1378,9 +1377,6 @@ cap: {
 
     sphactor_destroy(&capact2);
     zconfig_destroy(&actcnf);
-
-}
-
 
     // sphactor custom api test
     sphactor_t *apiact = sphactor_new ( api_sphactor, NULL, NULL, NULL);
