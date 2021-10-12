@@ -34,6 +34,8 @@ struct _sphactor_t {
     char    *endpoint;          //  Copy of our actor's endpoint
     char    *type;              //  Copy of our actor's type name
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
+    zconfig_t *capability;      //  Capability of this actor
+    zhash_t *values_cache;      //  Cached values from the capabilities
     float   posx;               //  XY position is used when visualising actors
     float   posy;
     sphactor_report_t *latest_report;   //  The latest report acquired from the actor
@@ -71,6 +73,9 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     self->type = NULL;
     self->endpoint = NULL;
     self->subscriptions = zlist_new();
+    self->capability = NULL;
+    self->values_cache = zhash_new();
+    zhash_autofree(self->values_cache); // we're using strings for now
     self->posx = 0;
     self->posy = 0;
     zlist_comparefn (self->subscriptions, (zlist_compare_fn *) strcmp);
@@ -245,6 +250,9 @@ sphactor_destroy (sphactor_t **self_p)
         zstr_free(&self->endpoint);
         if (self->type)
             zstr_free(&self->type);
+        if (self->capability)
+            zconfig_destroy(&self->capability);
+        zhash_destroy(&self->values_cache);
         // free the report cache
         if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
         self->latest_report = NULL;
@@ -256,6 +264,46 @@ sphactor_destroy (sphactor_t **self_p)
     }
 }
 
+
+zconfig_t *
+sphactor_capability(sphactor_t *self)
+{
+    assert(self);
+    return self->capability;
+}
+
+int
+sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
+{
+    assert(self);
+    assert(capability);
+    if (self->capability)
+        return -1;
+    self->capability = capability;
+    zconfig_t *capitem = zconfig_locate(self->capability, "capabilities/data");
+    int rc = -1;
+    while (capitem != NULL)
+    {
+        zconfig_t* name = zconfig_locate(capitem, "name");
+        zconfig_t* value = zconfig_locate(capitem, "value");
+        zconfig_t *zapic = zconfig_locate(capitem, "api_call");
+
+        if (zapic)
+        {
+            zconfig_t *zapiv = zconfig_locate(capitem, "api_value");
+            if (zapiv)
+                rc = sphactor_ask_api(self, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
+            else // no api value so send default
+                rc = sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
+
+        }
+        else
+            rc = sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
+
+        capitem = zconfig_next(capitem);
+    }
+    return rc;
+ }
 
 // caller does not own the uuid!
 zuuid_t *
@@ -464,12 +512,26 @@ sphactor_ask_capability (sphactor_t *self)
     return capconf;
 }
 
+static int
+sphactor_ask_api_native(sphactor_t *self, const char *api_format, ...)
+{
+    assert(self);
+    assert(api_format);
+    assert(strlen(api_format));
+    va_list argptr;
+    va_start(argptr, api_format);
+    int rc = zsock_vsend( sphactor_socket(self), api_format, argptr );
+    va_end(argptr);
+    return rc;
+}
+
 int
 sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format, const char *value)
 {
     assert(self);
     assert(strlen(api_call));
     assert(api_format);
+    int rc = 0;
     // this is still somewhat narrow but works for now
     if ( strlen(api_format) == 1 )
     {
@@ -477,7 +539,6 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
         strcpy(fmt, "s");
         strcat(fmt, api_format);
         char type = api_format[0];
-        int rc = 0;
         switch( type )
         {
             case 'b': {
@@ -508,7 +569,15 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
         free(fmt);
         return rc;
     }
-    return zsock_send( sphactor_socket(self), "si", api_call, atoi(value));
+    else
+        rc = zsock_send( sphactor_socket(self), "ss", api_call, value);
+
+    if (rc == 0)
+    {
+        zhash_update(self->values_cache, api_call, (void *)value);
+    }
+
+    return rc;
 }
 
 void
@@ -594,6 +663,49 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     return curActor;
 }
 
+// create a zconfig for this actor and optionally set a parent config
+zconfig_t *
+sphactor_save(sphactor_t *self, zconfig_t *parent)
+{
+    zconfig_t *curActor = zconfig_new("actor", parent);
+
+    zconfig_t *zuuid, *ztype, *zname, *zendpoint, *xpos, *ypos;
+    zuuid = zconfig_new("uuid", curActor);
+    ztype = zconfig_new("type", curActor);
+    zname = zconfig_new("name", curActor);
+    zendpoint = zconfig_new("endpoint", curActor);
+    xpos = zconfig_new("xpos", curActor);
+    ypos = zconfig_new("ypos", curActor);
+
+    zconfig_set_value(zuuid, "%s", zuuid_str(sphactor_ask_uuid (self) ) );
+    zconfig_set_value(ztype, "%s", sphactor_ask_actor_type(self) );
+    zconfig_set_value(zname, "%s", sphactor_ask_name(self) );
+    zconfig_set_value(zendpoint, "%s", sphactor_ask_endpoint(self) );
+    zconfig_set_value(xpos, "%f", (float)sphactor_position_x(self) );
+    zconfig_set_value(ypos, "%f", (float)sphactor_position_y(self) );
+
+    // get all capability data
+    if (self->capability)
+    {
+        zconfig_t *root = zconfig_locate(self->capability, "capabilities");
+        if ( root ) {
+            zconfig_t *data = zconfig_locate(root, "data");
+            while ( data ) {
+                zconfig_t *name = zconfig_locate(data,"name");
+                char *nameStr = zconfig_value(name);
+                char *valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
+
+                if (valueStr) // only store if there's a value
+                {
+                    zconfig_t *stored = zconfig_new(nameStr, curActor);
+                    zconfig_set_value(stored, "%s", valueStr);
+                }
+                data = zconfig_next(data);
+            }
+        }
+    }
+    return curActor;
+}
 
 sphactor_report_t *
 sphactor_report(sphactor_t *self)
@@ -763,6 +875,25 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
         int rc = sphactor_actor_set_capability((sphactor_actor_t *)ev->actor, zconfig_str_load(capability_string));
         assert(rc == 0);
     }
+    if ( streq( ev->type, "API") )
+    {
+        char *cmd = zmsg_popstr(ev->msg);
+        if ( streq(cmd, "someFloat") )
+        {
+            zframe_t *f = zmsg_pop(ev->msg);
+            float *flt = (float *)zframe_data(f);
+            assert( *flt - 1.0f < FLT_EPSILON);
+            zframe_destroy(&f);
+        }
+        else if ( streq(cmd, "someText") )
+        {
+            char *s = zmsg_popstr(ev->msg);
+            assert( streq(s, "Hello world!") );
+            zstr_free(&s);
+        }
+
+        zstr_free(&cmd);
+    }
     if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
     // just echo what we receive
@@ -898,7 +1029,6 @@ void
 sphactor_test (bool verbose)
 {
     printf (" * sphactor: ");
-
     // register unregister test
     actors_reg = zhash_new();
     sphactor_register("hello", &hello_sphactor, NULL, NULL);
@@ -1199,7 +1329,7 @@ sphactor_test (bool verbose)
     // sphactor capability test
     sphactor_t *capact = sphactor_new ( hello_sphactor, NULL, NULL, NULL);
     assert(capact);
-    zconfig_t *cap = sphactor_ask_capability(capact);
+    zconfig_t *cap = sphactor_capability(capact);
     // by default the capability is a null pointer
     assert(cap == NULL);
     sphactor_destroy(&capact);
@@ -1207,10 +1337,48 @@ sphactor_test (bool verbose)
     // sphactor capability test
     sphactor_t *capact2 = sphactor_new ( hello_sphactor2, NULL, NULL, NULL);
     assert(capact2);
-    zconfig_t *cap2 = sphactor_ask_capability(capact2);
+    rc = sphactor_set_capability(capact2, zconfig_str_load(capability_string));
+    assert(rc == 0);
+    zconfig_t *cap2 = sphactor_capability(capact2);
     // by default the capability is a null pointer
     assert(cap2);
+    // set capability again, should fail
+    rc = sphactor_set_capability(capact2, zconfig_str_load(capability_string));
+    assert( rc == -1);
+    //  get actor config
+    zconfig_t *actcnf = sphactor_save(capact2, NULL);
+    assert(actcnf);
+    zconfig_t *val = zconfig_locate(actcnf, "rate");
+    assert( streq(zconfig_value(val), "60"));
+    val = zconfig_locate(actcnf, "someFloat");
+    assert( streq(zconfig_value(val), "1.0"));
+    val = zconfig_locate(actcnf, "someText");
+    assert( streq(zconfig_value(val), "Hello world!"));
+    //  api calls based on capability
+    zconfig_t *apiitem = zconfig_locate(cap2, "capabilities/data");
+    while (apiitem != NULL)
+    {
+        zconfig_t* name = zconfig_locate(apiitem, "name");
+        zconfig_t* value = zconfig_locate(apiitem, "value");
+        zconfig_t *zapic = zconfig_locate(apiitem, "api_call");
+
+        if (zapic)
+        {
+            zconfig_t *zapiv = zconfig_locate(apiitem, "api_value");
+            if (zapiv)
+                sphactor_ask_api(capact2, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
+            else // no api value so send default
+                sphactor_ask_api(capact2, zconfig_value(zapic), "", zconfig_value(value));
+
+        }
+        else
+            sphactor_ask_api(capact2, zconfig_value(name), "", zconfig_value(value));
+
+        apiitem = zconfig_next(apiitem);
+    }
+
     sphactor_destroy(&capact2);
+    zconfig_destroy(&actcnf);
 
     // sphactor custom api test
     sphactor_t *apiact = sphactor_new ( api_sphactor, NULL, NULL, NULL);
