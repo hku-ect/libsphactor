@@ -1,5 +1,8 @@
 <class name = "sph stock" state = "stable">
 
+    <method name = "register_all" singleton = "1">
+    </method>
+    
     <method name = "log actor" singleton = "1">
         Simple actor that logs received messages to stdout
         <argument name = "event" type = "sphactor_event" mutable = "1" />

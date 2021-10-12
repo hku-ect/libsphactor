@@ -29,6 +29,7 @@ typedef struct {
 
 typedef struct  {
     sphactor_handler_fn *handler;
+    zconfig_t *capability;
     sphactor_constructor_fn *constructor;
     void *constructor_args; // can be NULL
 } sphactor_funcs_t;

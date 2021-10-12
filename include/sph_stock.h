@@ -24,6 +24,10 @@ extern "C" {
 //  @interface
 //  This is a stable class, and may not change except for emergencies. It
 //  is provided in stable builds.
+//
+SPHACTOR_EXPORT void
+    sph_stock_register_all (void);
+
 //  Simple actor that logs received messages to stdout
 SPHACTOR_EXPORT zmsg_t *
     sph_stock_log_actor (sphactor_event_t *event, void *args);

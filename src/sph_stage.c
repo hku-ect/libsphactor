@@ -312,15 +312,12 @@ sph_stage_test (bool verbose)
     "    con = \"inproc://2A7110DFC47C4DF19EB1D17E390CF86B,inproc://7B21D87CB6B04FC5801A5B396269876D,OSC\"\n";
     ///"    con = \"inproc://7B21D87CB6B04FC5801A5B396269876D,inproc://8FADA7E8835E42D5AF85FC75F4A9B70E,OSC\"\n"
     zconfig_t *root = zconfig_str_load (cnfstr);
-    int rc = sphactor_register("Log", sph_stock_log_actor, NULL, NULL);
-    assert(rc == 0);
-    rc = sphactor_register("Pulse", sph_stock_pulse_actor, NULL, NULL);
-    assert(rc == 0);
+    sph_stock_register_all();
 
     // test amount of loaded actors returned
     sph_stage_t *stage = sph_stage_new("test");
-    rc = sph_stage_cnf_load(stage, root );
-    assert( rc == 2);
+    int rc = sph_stage_cnf_load(stage, root );
+    assert( rc == 3);
     zclock_sleep(30);
     rc = sph_stage_clear(stage);
     assert( rc == 0);

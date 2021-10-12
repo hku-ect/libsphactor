@@ -61,7 +61,7 @@ SPHACTOR_EXPORT void
 //  actor.
 //  Returns 0 on success, -1 if already registered.
 SPHACTOR_EXPORT int
-    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler, zconfig_t *capability, sphactor_constructor_fn constructor, void *constructor_arg);
 
 //
 SPHACTOR_EXPORT int

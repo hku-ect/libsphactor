@@ -738,7 +738,7 @@ sphactor_report(sphactor_t *self)
 }
 
 int
-sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args)
+sphactor_register(const char *actor_type, sphactor_handler_fn handler, zconfig_t *capability, sphactor_constructor_fn constructor, void *constructor_args)
 {
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
     char *item = (char*)zhash_lookup(actors_reg, actor_type);
@@ -751,6 +751,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_
     sphactor_funcs_t *funcs = (sphactor_funcs_t *) zmalloc (sizeof (sphactor_funcs_t));
     assert (funcs);
     funcs->handler = handler;
+    funcs->capability = capability; // can be NULL;
     funcs->constructor = constructor; // can be NULL
     funcs->constructor_args = constructor_args; // can be NULL
 
@@ -771,6 +772,9 @@ sphactor_unregister( const char *actor_type)
         return -1;
     }
     //  this will not touch running actors!!!
+    sphactor_funcs_t *funcs = zhash_lookup( actors_reg, actor_type );
+    if (funcs->capability)
+        zconfig_destroy(&funcs->capability);
     zhash_delete( actors_reg, actor_type );
     // update actors_keys
     zlist_destroy(&actors_keys);
@@ -1031,7 +1035,7 @@ sphactor_test (bool verbose)
     printf (" * sphactor: ");
     // register unregister test
     actors_reg = zhash_new();
-    sphactor_register("hello", &hello_sphactor, NULL, NULL);
+    sphactor_register("hello", &hello_sphactor, NULL, NULL, NULL);
     sphactor_funcs_t *item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert( item->handler == &hello_sphactor );
@@ -1040,7 +1044,7 @@ sphactor_test (bool verbose)
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
     // register and construction test
-    sphactor_register("test", regtest_handler, regtest_constructor, "test");
+    sphactor_register("test", regtest_handler, NULL, regtest_constructor, "test");
     item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
@@ -1416,7 +1420,7 @@ sphactor_test (bool verbose)
     );
 
     // register Log
-    rc = sphactor_register("Log", regtest_handler, regtest_constructor, "test");
+    rc = sphactor_register("Log", regtest_handler, NULL, regtest_constructor, "test");
     assert(rc == 0);
     sphactor_t *loadedactor = sphactor_load(zconfig_locate(root, "actors/actor"));
     assert(loadedactor);

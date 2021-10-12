@@ -20,6 +20,7 @@
         Returns 0 on success, -1 if already registered.
         <argument name = "actor_type" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
+        <argument name = "capability" type = "zconfig" />
         <argument name = "constructor" type = "sphactor_constructor_fn" callback = "1"/>
         <argument name = "constructor_arg" type = "anything" />
         <return type = "integer"/>
