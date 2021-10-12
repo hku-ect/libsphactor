@@ -1341,7 +1341,7 @@ sphactor_test (bool verbose)
     // by default the capability is a null pointer
     assert(cap2);
     // set capability again, should fail
-    rc = sphactor_set_capability(capact2, zconfig_load(capability_string));
+    rc = sphactor_set_capability(capact2, zconfig_str_load(capability_string));
     assert( rc == -1);
     //  get actor config
     zconfig_t *actcnf = sphactor_save(capact2, NULL);
