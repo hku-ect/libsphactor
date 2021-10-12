@@ -147,6 +147,11 @@ sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
         instance = funcs->constructor(funcs->constructor_args);
     sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
     assert( self );
+    if (funcs->capability)
+    {
+        zconfig_t *capability = zconfig_dup(funcs->capability);
+        sphactor_set_capability(self, capability);
+    }
     sphactor_ask_set_actor_type(self, actor_type);
     return self;
 }
@@ -182,7 +187,7 @@ sphactor_load(const zconfig_t *config)
     //  We're assuming the ypos is the last thing added by the sphactor serialization
     //  from there we ready until we receive null and send that to the high-level actor
     //sph_deserialise_actor_data(new_actor, config);
-    zconfig_t *capability = sphactor_ask_capability(new_actor);
+    zconfig_t *capability = sphactor_capability(new_actor);
     if ( capability )
     {
         zconfig_t *cnf = zconfig_next(ypos);
@@ -224,7 +229,7 @@ sphactor_load(const zconfig_t *config)
     }
     else
     {
-        zsys_warning("no capability for this actor, thus no API calls. We should fix this!");
+        zsys_warning("No capability for this actor, thus no automatic API calls!");
     }
 
     //free(uuidStr);
@@ -503,18 +508,6 @@ sphactor_ask_set_reporting (sphactor_t *self, bool on)
     zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
-zconfig_t *
-sphactor_ask_capability (sphactor_t *self)
-{
-    assert(self);
-    int rc = zstr_send (self->actor, "CAPABILITY");
-    assert( rc == 0);
-    zconfig_t *capconf = NULL;
-    rc = zsock_recv( self->actor, "p", &capconf);
-    assert( rc == 0 );
-    return capconf;
-}
-
 static int
 sphactor_ask_api_native(sphactor_t *self, const char *api_format, ...)
 {
@@ -640,7 +633,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zconfig_set_value(ypos, "%f", (float)sphactor_position_y(self) );
 
     // Parse current state of data capabilities
-    zconfig_t *cap = sphactor_ask_capability(self);
+    zconfig_t *cap = sphactor_capability(self);
     if ( cap ) {
         zconfig_t *root = zconfig_locate(cap, "capabilities");
         if ( root ) {

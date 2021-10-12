@@ -156,11 +156,6 @@ SPHACTOR_EXPORT void
 SPHACTOR_EXPORT void
     sphactor_ask_set_reporting (sphactor_t *self, bool on);
 
-//  Request the actor's capability. This consists of a zconfig string
-//  containing its capability parameters.
-SPHACTOR_EXPORT zconfig_t *
-    sphactor_ask_capability (sphactor_t *self);
-
 //  Do an API request to the running actor. (TODO perhaps make this variadic)
 //  Returns 0 if send succesfully.
 SPHACTOR_EXPORT int

@@ -140,7 +140,8 @@ sph_stock_pulse_actor( sphactor_event_t *ev, void* args )
         // publish new msg
         return msg;
     }
-    return ev->msg;
+    zmsg_destroy(&ev->msg);
+    return NULL;
 }
 
 void
