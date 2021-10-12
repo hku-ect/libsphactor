@@ -530,7 +530,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
         free(fmt);
         return rc;
     }
-    return zsock_send( sphactor_socket(self), "si", api_call, atoi(value));
+    return zsock_send( sphactor_socket(self), "ss", api_call, value);
 }
 
 void
@@ -829,6 +829,23 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
 
         int rc = sphactor_actor_set_capability((sphactor_actor_t *)ev->actor, zconfig_str_load(capability_string));
         assert(rc == 0);
+    }
+    if ( streq( ev->type, "API") )
+    {
+        char *cmd = zmsg_popstr(ev->msg);
+        if ( streq(cmd, "someFloat") )
+        {
+            zframe_t *f = zmsg_pop(ev->msg);
+            float *flt = (float *)zframe_data(f);
+            assert( *flt - 1.0f < FLT_EPSILON);
+        }
+        else if ( streq(cmd, "someText") )
+        {
+            char *s = zmsg_popstr(ev->msg);
+            assert( streq(s, "Hello world!") );
+        }
+
+        zstr_free(&cmd);
     }
     if ( ev->msg == NULL ) return NULL;
     assert(ev->msg);
@@ -1291,8 +1308,28 @@ cap: {
     assert( streq(zconfig_value(val), "1.0"));
     val = zconfig_locate(actcnf, "someText");
     assert( streq(zconfig_value(val), "Hello world!"));
-
     //  api calls based on capability
+    zconfig_t *apiitem = zconfig_locate(cap2, "capabilities/data");
+    while (apiitem != NULL)
+    {
+        zconfig_t* name = zconfig_locate(apiitem, "name");
+        zconfig_t* value = zconfig_locate(apiitem, "value");
+        zconfig_t *zapic = zconfig_locate(apiitem, "api_call");
+
+        if (zapic)
+        {
+            zconfig_t *zapiv = zconfig_locate(apiitem, "api_value");
+            if (zapiv)
+                sphactor_ask_api(capact2, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
+            else // no api value so send default
+                sphactor_ask_api(capact2, zconfig_value(zapic), "", zconfig_value(value));
+        }
+        else
+            sphactor_ask_api(capact2, zconfig_value(name), "", zconfig_value(value));
+
+        apiitem = zconfig_next(apiitem);
+    }
+
     sphactor_destroy(&capact2);
 }
 
