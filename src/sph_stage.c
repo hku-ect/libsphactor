@@ -317,7 +317,7 @@ sph_stage_test (bool verbose)
     // test amount of loaded actors returned
     sph_stage_t *stage = sph_stage_new("test");
     int rc = sph_stage_cnf_load(stage, root );
-    assert( rc == 3);
+    assert( rc == 2);
     zclock_sleep(30);
     rc = sph_stage_clear(stage);
     assert( rc == 0);
