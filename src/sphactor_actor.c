@@ -58,6 +58,15 @@ struct _sphactor_actor_t {
     _Atomic     (void*) atomic_report;  // atomic pointer to report data
 };
 
+
+static int
+s_publish_msg(sphactor_actor_t *self, zmsg_t *msg)
+{
+    int rc = zmsg_send(&msg, self->pub);
+    self->send_time = zclock_mono();
+    return rc;
+}
+
 //  --------------------------------------------------------------------------
 //  Create a new sphactor_actor
 
@@ -445,9 +454,8 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         zmsg_t *retmsg = self->handler( &ev, self->handler_args);
         if (retmsg)
         {
-            //publish it
-            zmsg_send(&retmsg, self->pub);
-            self->send_time = zclock_mono();
+            // publish the msg
+            s_publish_msg(self, retmsg);
         }
         zmsg_destroy( &retmsg );
     }
@@ -802,7 +810,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 if (retmsg)
                 {
                     // publish the msg
-                    zmsg_send(&retmsg, self->pub);
+                    s_publish_msg(self, retmsg);
 
                     // delete message if we have no connections (otherwise it leaks)
                     if ( zsock_endpoint(self->pub) == NULL ) {
@@ -869,8 +877,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 if (retmsg)
                 {
                     // publish the msg
-                    zmsg_send(&retmsg, self->pub);
-                    self->send_time = zclock_mono();
+                    s_publish_msg(self, retmsg);
 
                     // delete message if we have no connections (otherwise it leaks)
                     if ( zsock_endpoint(self->pub) == NULL )
@@ -897,7 +904,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 if (retmsg)
                 {
                     // publish the msg
-                    zmsg_send(&retmsg, self->pub);
+                    s_publish_msg(self, retmsg);
 
                     // delete message if we have no connections (otherwise it leaks)
                     if ( zsock_endpoint(self->pub) == NULL )
