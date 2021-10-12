@@ -35,6 +35,7 @@ struct _sphactor_t {
     char    *type;              //  Copy of our actor's type name
     zlist_t *subscriptions;     //  Copy of our actor's (incoming) connections
     zconfig_t *capability;      //  Capability of this actor
+    zhash_t *values_cache;      //  Cached values from the capabilities
     float   posx;               //  XY position is used when visualising actors
     float   posy;
     sphactor_report_t *latest_report;   //  The latest report acquired from the actor
@@ -73,6 +74,8 @@ sphactor_new (sphactor_handler_fn handler, void *args, const char *name, zuuid_t
     self->endpoint = NULL;
     self->subscriptions = zlist_new();
     self->capability = NULL;
+    self->values_cache = zhash_new();
+    zhash_autofree(self->values_cache); // we're using strings for now
     self->posx = 0;
     self->posy = 0;
     zlist_comparefn (self->subscriptions, (zlist_compare_fn *) strcmp);
@@ -249,6 +252,7 @@ sphactor_destroy (sphactor_t **self_p)
             zstr_free(&self->type);
         if (self->capability)
             zconfig_destroy(&self->capability);
+        zhash_destroy(&self->values_cache);
         // free the report cache
         if ( self->latest_report ) sphactor_report_destroy(&self->latest_report);
         self->latest_report = NULL;
@@ -276,8 +280,28 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
     if (self->capability)
         return -1;
     self->capability = capability;
-    return 0;
-}
+    zconfig_t *capitem = zconfig_locate(self->capability, "capabilities/data");
+    while (capitem != NULL)
+    {
+        zconfig_t* name = zconfig_locate(capitem, "name");
+        zconfig_t* value = zconfig_locate(capitem, "value");
+        zconfig_t *zapic = zconfig_locate(capitem, "api_call");
+
+        if (zapic)
+        {
+            zconfig_t *zapiv = zconfig_locate(capitem, "api_value");
+            if (zapiv)
+                sphactor_ask_api(self, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
+            else // no api value so send default
+                sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
+
+        }
+        else
+            sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
+
+        capitem = zconfig_next(capitem);
+    }
+ }
 
 // caller does not own the uuid!
 zuuid_t *
@@ -486,12 +510,26 @@ sphactor_ask_capability (sphactor_t *self)
     return capconf;
 }
 
+static int
+sphactor_ask_api_native(sphactor_t *self, const char *api_format, ...)
+{
+    assert(self);
+    assert(api_format);
+    assert(strlen(api_format));
+    va_list argptr;
+    va_start(argptr, api_format);
+    int rc = zsock_vsend( sphactor_socket(self), api_format, argptr );
+    va_end(argptr);
+    return rc;
+}
+
 int
 sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format, const char *value)
 {
     assert(self);
     assert(strlen(api_call));
     assert(api_format);
+    int rc = 0;
     // this is still somewhat narrow but works for now
     if ( strlen(api_format) == 1 )
     {
@@ -499,7 +537,6 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
         strcpy(fmt, "s");
         strcat(fmt, api_format);
         char type = api_format[0];
-        int rc = 0;
         switch( type )
         {
             case 'b': {
@@ -530,7 +567,15 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
         free(fmt);
         return rc;
     }
-    return zsock_send( sphactor_socket(self), "ss", api_call, value);
+    else
+        rc = zsock_send( sphactor_socket(self), "ss", api_call, value);
+
+    if (rc == 0)
+    {
+        zhash_update(self->values_cache, api_call, value);
+    }
+
+    return rc;
 }
 
 void
@@ -645,13 +690,11 @@ sphactor_save(sphactor_t *self, zconfig_t *parent)
             zconfig_t *data = zconfig_locate(root, "data");
             while ( data ) {
                 zconfig_t *name = zconfig_locate(data,"name");
-                zconfig_t *value = zconfig_locate(data,"value");
+                char *nameStr = zconfig_value(name);
+                char *valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
 
-                if (value) // only store if there's a value
+                if (valueStr) // only store if there's a value
                 {
-                    char *nameStr = zconfig_value(name);
-                    char *valueStr = zconfig_value(value);
-
                     zconfig_t *stored = zconfig_new(nameStr, curActor);
                     zconfig_set_value(stored, "%s", valueStr);
                 }
@@ -838,11 +881,13 @@ hello_sphactor2(sphactor_event_t *ev, void *args)
             zframe_t *f = zmsg_pop(ev->msg);
             float *flt = (float *)zframe_data(f);
             assert( *flt - 1.0f < FLT_EPSILON);
+            zframe_destroy(&f);
         }
         else if ( streq(cmd, "someText") )
         {
             char *s = zmsg_popstr(ev->msg);
             assert( streq(s, "Hello world!") );
+            zstr_free(&s);
         }
 
         zstr_free(&cmd);
@@ -1323,6 +1368,7 @@ cap: {
                 sphactor_ask_api(capact2, zconfig_value(zapic), zconfig_value(zapiv), zconfig_value(value));
             else // no api value so send default
                 sphactor_ask_api(capact2, zconfig_value(zapic), "", zconfig_value(value));
+
         }
         else
             sphactor_ask_api(capact2, zconfig_value(name), "", zconfig_value(value));
@@ -1331,6 +1377,8 @@ cap: {
     }
 
     sphactor_destroy(&capact2);
+    zconfig_destroy(&actcnf);
+
 }
 
 
