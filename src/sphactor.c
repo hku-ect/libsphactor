@@ -305,7 +305,7 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
                 rc = sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
 
         }
-        else
+        else if (value)
             rc = sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
 
         capitem = zconfig_next(capitem);
