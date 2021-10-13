@@ -558,7 +558,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, value);
             } break;
             default: {
-                zsys_error("Unsupported send_api call: api_call: %s, api_format: %s, value: %s", api_call, api_format, value);
+                zsys_error("Unsupported sphactor_ask_api call: api_call: %s, api_format: %s, value: %s", api_call, api_format, value);
                 rc = -1;
             } break;
         }
