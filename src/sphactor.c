@@ -687,8 +687,16 @@ sphactor_save(sphactor_t *self, zconfig_t *parent)
             zconfig_t *data = zconfig_locate(root, "data");
             while ( data ) {
                 zconfig_t *name = zconfig_locate(data,"name");
+                zconfig_t *apic = zconfig_locate(data,"api_call");
                 char *nameStr = zconfig_value(name);
-                char *valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
+                char *valueStr;
+                if (apic)
+                {
+                    char *apiStr = zconfig_value(apic);
+                    valueStr = (char *)zhash_lookup(self->values_cache, apiStr);
+                }
+                else
+                    valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
 
                 if (valueStr) // only store if there's a value
                 {
@@ -799,6 +807,9 @@ sphactor_dispose ()
     void *it = zhash_first(actors_reg);
     while (it)
     {
+        sphactor_funcs_t *f = (sphactor_funcs_t *)it;
+        if( f->capability)
+            zconfig_destroy(&f->capability);
         free(it);
         it = zhash_next(actors_reg);
     }
