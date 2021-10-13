@@ -563,7 +563,6 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
             } break;
         }
         free(fmt);
-        return rc;
     }
     else
         rc = zsock_send( sphactor_socket(self), "ss", api_call, value);
