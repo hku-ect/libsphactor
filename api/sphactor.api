@@ -20,6 +20,7 @@
         Returns 0 on success, -1 if already registered.
         <argument name = "actor_type" type = "string"/>
         <argument name = "handler" type = "sphactor_handler_fn" callback = "1"/>
+        <argument name = "capability" type = "zconfig" />
         <argument name = "constructor" type = "sphactor_constructor_fn" callback = "1"/>
         <argument name = "constructor_arg" type = "anything" />
         <return type = "integer"/>
@@ -162,12 +163,6 @@
         status reports safely. For example this can be used to render a 
         visual representation of the actor.
         <argument name = "on" type = "boolean" />
-    </method>
-
-    <method name = "ask capability">
-        Request the actor's capability. This consists of a zconfig string 
-        containing its capability parameters.
-        <return type = "zconfig" />
     </method>
 
     <method name = "ask api">

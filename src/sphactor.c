@@ -147,6 +147,11 @@ sphactor_new_by_type (const char *actor_type, const char *name, zuuid_t *uuid)
         instance = funcs->constructor(funcs->constructor_args);
     sphactor_t *self = sphactor_new( funcs->handler, instance, name, uuid);
     assert( self );
+    if (funcs->capability)
+    {
+        zconfig_t *capability = zconfig_dup(funcs->capability);
+        sphactor_set_capability(self, capability);
+    }
     sphactor_ask_set_actor_type(self, actor_type);
     return self;
 }
@@ -182,7 +187,7 @@ sphactor_load(const zconfig_t *config)
     //  We're assuming the ypos is the last thing added by the sphactor serialization
     //  from there we ready until we receive null and send that to the high-level actor
     //sph_deserialise_actor_data(new_actor, config);
-    zconfig_t *capability = sphactor_ask_capability(new_actor);
+    zconfig_t *capability = sphactor_capability(new_actor);
     if ( capability )
     {
         zconfig_t *cnf = zconfig_next(ypos);
@@ -224,7 +229,7 @@ sphactor_load(const zconfig_t *config)
     }
     else
     {
-        zsys_warning("no capability for this actor, thus no API calls. We should fix this!");
+        zsys_warning("No capability for this actor, thus no automatic API calls!");
     }
 
     //free(uuidStr);
@@ -278,7 +283,10 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
     assert(self);
     assert(capability);
     if (self->capability)
+    {
+        zconfig_destroy(&capability);
         return -1;
+    }
     self->capability = capability;
     zconfig_t *capitem = zconfig_locate(self->capability, "capabilities/data");
     int rc = -1;
@@ -500,18 +508,6 @@ sphactor_ask_set_reporting (sphactor_t *self, bool on)
     zstr_send( self->actor, on ? "TRUE" : "FALSE");
 }
 
-zconfig_t *
-sphactor_ask_capability (sphactor_t *self)
-{
-    assert(self);
-    int rc = zstr_send (self->actor, "CAPABILITY");
-    assert( rc == 0);
-    zconfig_t *capconf = NULL;
-    rc = zsock_recv( self->actor, "p", &capconf);
-    assert( rc == 0 );
-    return capconf;
-}
-
 static int
 sphactor_ask_api_native(sphactor_t *self, const char *api_format, ...)
 {
@@ -637,7 +633,7 @@ sphactor_zconfig_append(sphactor_t *self, zconfig_t *root)
     zconfig_set_value(ypos, "%f", (float)sphactor_position_y(self) );
 
     // Parse current state of data capabilities
-    zconfig_t *cap = sphactor_ask_capability(self);
+    zconfig_t *cap = sphactor_capability(self);
     if ( cap ) {
         zconfig_t *root = zconfig_locate(cap, "capabilities");
         if ( root ) {
@@ -738,7 +734,7 @@ sphactor_report(sphactor_t *self)
 }
 
 int
-sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_args)
+sphactor_register(const char *actor_type, sphactor_handler_fn handler, zconfig_t *capability, sphactor_constructor_fn constructor, void *constructor_args)
 {
     if (actors_reg == NULL ) actors_reg = zhash_new();  // initializer
     char *item = (char*)zhash_lookup(actors_reg, actor_type);
@@ -751,6 +747,7 @@ sphactor_register(const char *actor_type, sphactor_handler_fn handler, sphactor_
     sphactor_funcs_t *funcs = (sphactor_funcs_t *) zmalloc (sizeof (sphactor_funcs_t));
     assert (funcs);
     funcs->handler = handler;
+    funcs->capability = capability; // can be NULL;
     funcs->constructor = constructor; // can be NULL
     funcs->constructor_args = constructor_args; // can be NULL
 
@@ -771,6 +768,9 @@ sphactor_unregister( const char *actor_type)
         return -1;
     }
     //  this will not touch running actors!!!
+    sphactor_funcs_t *funcs = zhash_lookup( actors_reg, actor_type );
+    if (funcs->capability)
+        zconfig_destroy(&funcs->capability);
     zhash_delete( actors_reg, actor_type );
     // update actors_keys
     zlist_destroy(&actors_keys);
@@ -1031,7 +1031,7 @@ sphactor_test (bool verbose)
     printf (" * sphactor: ");
     // register unregister test
     actors_reg = zhash_new();
-    sphactor_register("hello", &hello_sphactor, NULL, NULL);
+    sphactor_register("hello", &hello_sphactor, NULL, NULL, NULL);
     sphactor_funcs_t *item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "hello");
     assert(item);
     assert( item->handler == &hello_sphactor );
@@ -1040,7 +1040,7 @@ sphactor_test (bool verbose)
     assert( item == NULL );
     assert( zhash_size(actors_reg) == 0 );
     // register and construction test
-    sphactor_register("test", regtest_handler, regtest_constructor, "test");
+    sphactor_register("test", regtest_handler, NULL, regtest_constructor, "test");
     item = (sphactor_funcs_t*)zhash_lookup(actors_reg, "test");
     assert(item);
     assert(item->handler);
@@ -1416,7 +1416,7 @@ sphactor_test (bool verbose)
     );
 
     // register Log
-    rc = sphactor_register("Log", regtest_handler, regtest_constructor, "test");
+    rc = sphactor_register("Log", regtest_handler, NULL, regtest_constructor, "test");
     assert(rc == 0);
     sphactor_t *loadedactor = sphactor_load(zconfig_locate(root, "actors/actor"));
     assert(loadedactor);

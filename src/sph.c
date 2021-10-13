@@ -138,9 +138,7 @@ int main (int argc, char *argv [])
 
     //register_dyn_libs("bla");
     // register stock actors
-    sphactor_register( "Log", &sph_stock_log_actor, NULL, NULL );
-    sphactor_register( "Count", &sph_stock_count_actor, NULL, NULL );
-    sphactor_register( "Pulse", &sph_stock_pulse_actor, NULL, NULL );
+    sph_stock_register_all();
 
     int rc = 0;
     const char *act = zargs_get(args, "--actor");

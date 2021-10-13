@@ -140,7 +140,16 @@ sph_stock_pulse_actor( sphactor_event_t *ev, void* args )
         // publish new msg
         return msg;
     }
-    return ev->msg;
+    zmsg_destroy(&ev->msg);
+    return NULL;
+}
+
+void
+sph_stock_register_all (void)
+{
+    sphactor_register( "Log", &sph_stock_log_actor, NULL, NULL, NULL );
+    sphactor_register( "Count", &sph_stock_count_actor, NULL, NULL, NULL );
+    sphactor_register( "Pulse", &sph_stock_pulse_actor, zconfig_str_load(pulseCapabilities), NULL, NULL );
 }
 
 //  --------------------------------------------------------------------------

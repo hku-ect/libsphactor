@@ -61,7 +61,7 @@ SPHACTOR_EXPORT void
 //  actor.
 //  Returns 0 on success, -1 if already registered.
 SPHACTOR_EXPORT int
-    sphactor_register (const char *actor_type, sphactor_handler_fn handler, sphactor_constructor_fn constructor, void *constructor_arg);
+    sphactor_register (const char *actor_type, sphactor_handler_fn handler, zconfig_t *capability, sphactor_constructor_fn constructor, void *constructor_arg);
 
 //
 SPHACTOR_EXPORT int
@@ -155,11 +155,6 @@ SPHACTOR_EXPORT void
 //  visual representation of the actor.
 SPHACTOR_EXPORT void
     sphactor_ask_set_reporting (sphactor_t *self, bool on);
-
-//  Request the actor's capability. This consists of a zconfig string
-//  containing its capability parameters.
-SPHACTOR_EXPORT zconfig_t *
-    sphactor_ask_capability (sphactor_t *self);
 
 //  Do an API request to the running actor. (TODO perhaps make this variadic)
 //  Returns 0 if send succesfully.
