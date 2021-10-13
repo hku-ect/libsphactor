@@ -546,7 +546,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
                 SendAPI<char *>(zapi_call, zapiv, zvalue, &buf);
                 zstr_free(&buf);
                 */
-                zsys_error("Unsupprted 'b' format char in send_api");
+                zsys_error("Unsupprted 'b' format char in sphactor_ask_api");
             } break;
             case 'i': {
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, atoi(value));
