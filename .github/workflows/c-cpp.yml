@@ -13,22 +13,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: libZMQ Dep
-      run: |
-        git clone https://github.com/zeromq/libzmq.git
-        cd libzmq
-        ./autogen.sh
-        ./configure
-        make
-        sudo make install
-    - name: CZMQ Dep
-      run: |
-        git clone https://github.com/zeromq/czmq.git
-        cd czmq
-        ./autogen.sh
-        ./configure
-        make
-        sudo make install
+    - name: add Debian Packages
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo-name: obs
+        repo: deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/ ./
+        keys-asc: https://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/Release.key
+        install: libzmq5 libzmq3-dev libczmq
+
     - name: autogen.sh
       run: ./autogen.sh
     - name: configure
@@ -37,5 +29,5 @@ jobs:
       run: make
     - name: make check
       run: make check
-    - name: make distcheck
-      run: make distcheck
+    #- name: make distcheck
+    #  run: make distcheck
