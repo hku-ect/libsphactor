@@ -19,7 +19,7 @@ jobs:
         repo-name: obs
         repo: deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/ ./
         keys-asc: https://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_20.04/Release.key
-        install: libzmq5 libzmq3-dev libczmq
+        install: libzmq5 libzmq3-dev czmq
 
     - name: autogen.sh
       run: ./autogen.sh
