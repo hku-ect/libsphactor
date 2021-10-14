@@ -775,7 +775,7 @@ sphactor_unregister( const char *actor_type)
         return -1;
     }
     //  this will not touch running actors!!!
-    sphactor_funcs_t *funcs = zhash_lookup( actors_reg, actor_type );
+    sphactor_funcs_t *funcs = (sphactor_funcs_t *)zhash_lookup( actors_reg, actor_type );
     if (funcs->capability)
         zconfig_destroy(&funcs->capability);
     zhash_delete( actors_reg, actor_type );
