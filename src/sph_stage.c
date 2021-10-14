@@ -175,12 +175,11 @@ static zconfig_t *
 s_sph_stage_save_zconfig(sph_stage_t *self)
 {
     zconfig_t* config = sphactor_zconfig_new("root");
+    // create actors root
+    zconfig_t *actorsroot = zconfig_new("actors", config);
     for (sphactor_t *it = (sphactor_t *)zhash_first(self->actors); it != NULL; it = (sphactor_t *)zhash_next( self->actors ) )
     {
-        zconfig_t* actorSection = sphactor_zconfig_append(it, config);
-
-        // Add custom actor data to section
-        //actor->SerializeActorData(actorSection);
+        zconfig_t* actorSection = sphactor_save(it, actorsroot);
 
         zconfig_t* connections = zconfig_locate(config, "connections");
         if ( connections == NULL ) {

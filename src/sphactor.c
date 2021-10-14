@@ -305,7 +305,7 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
                 rc = sphactor_ask_api(self, zconfig_value(zapic), "", zconfig_value(value));
 
         }
-        else
+        else if (value)
             rc = sphactor_ask_api(self, zconfig_value(name), "", zconfig_value(value));
 
         capitem = zconfig_next(capitem);
@@ -546,7 +546,7 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
                 SendAPI<char *>(zapi_call, zapiv, zvalue, &buf);
                 zstr_free(&buf);
                 */
-                zsys_error("Unsupprted 'b' format char in send_api");
+                zsys_error("Unsupprted 'b' format char in sphactor_ask_api");
             } break;
             case 'i': {
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, atoi(value));
@@ -558,12 +558,11 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, value);
             } break;
             default: {
-                zsys_error("Unsupported send_api call: api_call: %s, api_format: %s, value: %s", api_call, api_format, value);
+                zsys_error("Unsupported sphactor_ask_api call: api_call: %s, api_format: %s, value: %s", api_call, api_format, value);
                 rc = -1;
             } break;
         }
         free(fmt);
-        return rc;
     }
     else
         rc = zsock_send( sphactor_socket(self), "ss", api_call, value);
@@ -688,8 +687,16 @@ sphactor_save(sphactor_t *self, zconfig_t *parent)
             zconfig_t *data = zconfig_locate(root, "data");
             while ( data ) {
                 zconfig_t *name = zconfig_locate(data,"name");
+                zconfig_t *apic = zconfig_locate(data,"api_call");
                 char *nameStr = zconfig_value(name);
-                char *valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
+                char *valueStr;
+                if (apic)
+                {
+                    char *apiStr = zconfig_value(apic);
+                    valueStr = (char *)zhash_lookup(self->values_cache, apiStr);
+                }
+                else
+                    valueStr = (char *)zhash_lookup(self->values_cache, nameStr);
 
                 if (valueStr) // only store if there's a value
                 {
@@ -800,6 +807,9 @@ sphactor_dispose ()
     void *it = zhash_first(actors_reg);
     while (it)
     {
+        sphactor_funcs_t *f = (sphactor_funcs_t *)it;
+        if( f->capability)
+            zconfig_destroy(&f->capability);
         free(it);
         it = zhash_next(actors_reg);
     }

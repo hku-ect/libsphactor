@@ -28,16 +28,20 @@ sphactor_cpp_arg_constructor(void *arg)
 
 template<class SphactorClass>
 SPHACTOR_EXPORT int
-sphactor_register (const char *actor_type)
+sphactor_register (const char *actor_type, const char *capability)
 {
-    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_constructor<SphactorClass>, NULL);
+    if (capability)
+        return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, zconfig_str_load(capability), &sphactor_cpp_constructor<SphactorClass>, NULL);
+    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, NULL, &sphactor_cpp_constructor<SphactorClass>, NULL);
 }
 
 template<class SphactorClass>
 SPHACTOR_EXPORT int
-sphactor_register (const char *actor_type, void *constructor_arg)
+sphactor_register (const char *actor_type, const char *capability, void *constructor_arg)
 {
-    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, &sphactor_cpp_arg_constructor<SphactorClass>, constructor_arg);
+    if (capability)
+        return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, zconfig_str_load(capability), &sphactor_cpp_arg_constructor<SphactorClass>, constructor_arg);
+    return sphactor_register(actor_type, sphactor_member_handler<SphactorClass>, NULL, &sphactor_cpp_arg_constructor<SphactorClass>, constructor_arg);
 }
 
 // Base class for actors, just inherit this class if convenient
