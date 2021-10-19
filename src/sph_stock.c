@@ -45,7 +45,11 @@ sph_stock_log_actor( sphactor_event_t *ev, void* args )
                 // parse zosc_t msg
                 zosc_t * oscMsg = zosc_fromframe(frame);
                 if ( oscMsg )
+                {
                     zosc_print(oscMsg);
+                    fflush(stdout);
+                }
+
 
                 zosc_destroy(&oscMsg);
             }
@@ -100,18 +104,6 @@ const char * pulseCapabilities =
                                 "        step = \"1\"\n"
                                 "        api_call = \"SET TIMEOUT\"\n"
                                 "        api_value = \"i\"\n"           // optional picture format used in zsock_send
-                                "    data\n"
-                                "        name = \"someFloat\"\n"
-                                "        type = \"float\"\n"
-                                "        value = \"1.0\"\n"
-                                "        min = \"0\"\n"
-                                "        max = \"10\"\n"
-                                "        step = \"0\"\n"
-                                "    data\n"
-                                "        name = \"someText\"\n"
-                                "        type = \"string\"\n"
-                                "        value = \"Hello world!\"\n"
-                                "        max = \"64\"\n"
                                 "outputs\n"
                                 "    output\n"
                                 "        type = \"OSC\"\n";
@@ -147,8 +139,8 @@ sph_stock_pulse_actor( sphactor_event_t *ev, void* args )
 void
 sph_stock_register_all (void)
 {
-    sphactor_register( "Log", &sph_stock_log_actor, NULL, NULL, NULL );
-    sphactor_register( "Count", &sph_stock_count_actor, NULL, NULL, NULL );
+    sphactor_register( "Log", &sph_stock_log_actor, zconfig_str_load(logCapabilities), NULL, NULL );
+    sphactor_register( "Count", &sph_stock_count_actor, zconfig_str_load(countCapabilities), NULL, NULL );
     sphactor_register( "Pulse", &sph_stock_pulse_actor, zconfig_str_load(pulseCapabilities), NULL, NULL );
 }
 
