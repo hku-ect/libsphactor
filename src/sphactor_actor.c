@@ -791,7 +791,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
             }
         }
 
-        if ( which == NULL || skipped ) {
+        if ( which == NULL || skipped ) {  // timer events
             //  timed events don't carry a message instead NULL is passed
             //  update our status report 5=TIME
             self->status = SPHACTOR_REPORT_TIME;
@@ -819,28 +819,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 }
             }
         }
-        else if ( which != NULL && !zsock_is(which) ) {
-            int * fd = (int*)which;
-            /* Obsolete
-            if ( func ) {
-                //  update our status report 6=FDSOCK
-                self->status = SPHACTOR_REPORT_FDSOCK;
-                if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status, self->iterations, zosc_dup(self->reportMsg)));
-
-                zmsg_t * retmsg = func( self, (zsock_t * )fd, NULL ); // this won't work. Just here to make the compiler happy
-                if ( retmsg != NULL ) {
-                    // publish the msg
-                    zmsg_send(&retmsg, self->pub);
-
-                    // delete message if we have no connections (otherwise it leaks)
-                    if ( zsock_endpoint(self->pub) == NULL ) {
-                        zmsg_destroy(&retmsg);
-                    }
-                }
-            } //else??? */
-        }
-        else if ( zsock_is(which) )
+        else if ( zsock_is(which) )  // zsock events
         {
             if (which == self->pipe)
             {
@@ -884,7 +863,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                         zmsg_destroy(&retmsg);
                 }
             }
-            else
+            else  // custom zsock event (FDSOCK)
             {
                 // it is a socket so let's try our added sockets by passing them to the handler
                 //  update our status report 6=FDSOCK
@@ -912,17 +891,30 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                 }
             }
         }
-        else {
-            // TODO remove this, do we need it?
-            zsock_t *sub = (zsock_t *)zhash_first( self->subs );
-            while ( sub )
+        else  { // custom filedescriptor events
+            // it must be a filedescriptor so let's try our added sockets by passing this to the handler
+            //  update our status report 6=FDSOCK
+            self->status = SPHACTOR_REPORT_FDSOCK;
+            if ( self->reporting )
+                // TODO: should we set recv time? Or do we do this only on the sub socket?
+                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                                 self->iterations,
+                                                                                 self->recv_time,
+                                                                                 self->send_time,
+                                                                                 zosc_dup(self->reportMsg)));
+
+            zmsg_t *sockfdm = zmsg_new();
+            zmsg_addmem(sockfdm, &which, sizeof( void *));
+            sphactor_event_t ev = { sockfdm, "FDSOCK", self->name, zuuid_str(self->uuid), self };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
             {
-                if ( which == sub )
-                {
-                    //  run the actor's handle
-                    //self->handler
-                    break;
-                }
+                // publish the msg
+                s_publish_msg(self, retmsg);
+
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL )
+                    zmsg_destroy(&retmsg);
             }
         }
         self->iterations++;
