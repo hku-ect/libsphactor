@@ -111,10 +111,10 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
 
         char *pch = strtok (conVal, ",");
         assert(pch);
-        sprintf(output, "%s", pch);
+        sprintf(input, "%s", pch);
         pch = strtok (NULL, ",");
         assert(pch);
-        sprintf(input, "%s", pch);
+        sprintf(output, "%s", pch);
         pch = strtok(NULL, ",");
         assert(pch);
         sprintf(type, "%s", pch);
