@@ -757,7 +757,7 @@ sphactor_actor_run (zsock_t *pipe, void *args)
     if ( self->timeout == -1)
     {
         time_till_next = -1;
-        self->time_next = INT_MAX;
+        self->time_next = INT64_MAX;
     }
 
     while (!self->terminated) {
