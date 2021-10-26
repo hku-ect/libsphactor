@@ -296,7 +296,7 @@ sphactor_set_capability(sphactor_t *self, zconfig_t *capability)
         zconfig_t* value = zconfig_locate(capitem, "value");
         zconfig_t *zapic = zconfig_locate(capitem, "api_call");
 
-        if (zapic)
+        if (zapic && value)
         {
             zconfig_t *zapiv = zconfig_locate(capitem, "api_value");
             if (zapiv)
