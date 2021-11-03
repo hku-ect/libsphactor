@@ -203,7 +203,8 @@ sphactor_load(const zconfig_t *config)
                 zconfig_t *data = zconfig_locate(root, "data");
                 while ( data ) {
                     zconfig_t *name = zconfig_locate(data, "name");
-                    if (name && streq(zconfig_value(name), cnfNme) )
+                    zconfig_t *type = zconfig_locate(data, "type");
+                    if (name && streq(zconfig_value(name), cnfNme) && !streq(zconfig_value(type), "trigger") )
                     {
                         // TODO: here's the value is set in the capability, this is not safe!!!
                         zconfig_t *value = zconfig_locate(data, "value");

@@ -294,7 +294,7 @@ sphactor_actor_set_timeout (sphactor_actor_t *self, int64_t timeout)
 {
     self->timeout = timeout;
     if (self->timeout >= 0 ) self->time_next = zclock_mono() + self->timeout;
-    else self->time_next = INT_MAX;
+    else self->time_next = INT64_MAX;
 }
 
 int
