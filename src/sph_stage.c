@@ -82,14 +82,15 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
     while( actor_conf != NULL )
     {
         sphactor_t *new_actor =  sphactor_load(actor_conf);
-        assert(new_actor);
+        if (new_actor)
+        {
+            // save actor
+            int rc = zhash_insert(self->actors, zuuid_str(sphactor_ask_uuid(new_actor)), new_actor);
+            assert( rc == 0);
 
-        // save actor
-        int rc = zhash_insert(self->actors, zuuid_str(sphactor_ask_uuid(new_actor)), new_actor);
-        assert( rc == 0);
-
-        // load settings for actor
-        //sph_deserialise_actor_data(new_actor, actor_conf);
+            // load settings for actor
+            //sph_deserialise_actor_data(new_actor, actor_conf);
+        }
 
         actor_conf = zconfig_next(actor_conf);
     }

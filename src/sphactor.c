@@ -178,7 +178,11 @@ sphactor_load(const zconfig_t *config)
     zuuid_set_str(uid, uuidStr);
     // create actor
     sphactor_t* new_actor = sphactor_new_by_type(typeStr, nameStr, uid);
-    assert(new_actor);
+    if ( new_actor == NULL)
+    {
+        zsys_error("Failed to create actor type %s", typeStr);
+        return NULL;
+    }
 
     // set position
     sphactor_set_position( new_actor, atof(xposStr), atof(yposStr) );
