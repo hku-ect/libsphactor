@@ -491,6 +491,55 @@ sphactor_connections(sphactor_t *self)
     return self->subscriptions;
 }
 
+zlist_t *
+sphactor_ask_filters (sphactor_t *self)
+{
+    assert(self);
+    int rc = zstr_sendx( self->actor, "FILTERS", NULL );
+    assert( rc == 0);
+    zmsg_t *response = zmsg_recv( self->actor );
+    assert(response);
+    char* filter = zmsg_popstr(response);
+    assert(filter);
+    zlist_t *filters = NULL;
+    if (! streq(filter, "") )
+    {
+        filters = zlist_new();
+        zlist_autofree(filters);
+        zlist_append(filters, (void *)filter);
+        zstr_free(&filter);
+        while ( filter = zmsg_popstr(response) )
+        {
+            assert( !streq(filter, "") );
+            zlist_append(filters, (void *)filter);
+            zstr_free(&filter);
+        }
+    }
+    else
+        zstr_free(&filter);
+
+    zmsg_destroy(&response);
+    return filters;
+}
+
+void
+sphactor_ask_add_filter(sphactor_t *self, const char *filter)
+{
+    assert(self);
+    assert(filter);
+    int rc = zstr_sendx( self->actor, "FILTER ADD", filter, NULL );
+    assert( rc == 0);
+}
+
+void
+sphactor_ask_remove_filter(sphactor_t *self, const char *filter)
+{
+    assert(self);
+    assert(filter);
+    int rc = zstr_sendx( self->actor, "FILTER REMOVE", filter, NULL );
+    assert( rc == 0);
+}
+
 zsock_t *
 sphactor_socket(sphactor_t *self)
 {
@@ -1447,6 +1496,44 @@ sphactor_test (bool verbose)
     // sphactor_proc test
     //sphactor_t *proca = sphactor_new_proc("Log", NULL, NULL);
     //assert(proca == NULL);
+
+    // filter tests
+    {
+        if (verbose)
+            zsys_info("Filter tests:");
+        sphactor_t *filteract = sphactor_new(api_sphactor, NULL, NULL, NULL);
+        assert(filteract);
+        zlist_t *filters = sphactor_ask_filters(filteract);
+        assert(filters == NULL);
+
+        sphactor_ask_add_filter(filteract, "test");
+        filters = sphactor_ask_filters(filteract);
+        assert(filters != NULL);
+        assert(zlist_size(filters) == 1);
+        char *filter = zlist_first(filters);
+        assert( streq(filter, "test") );
+        zlist_destroy(&filters);
+        assert(filters == NULL);
+
+        sphactor_ask_remove_filter(filteract, "test");
+        filters = sphactor_ask_filters(filteract);
+        assert(filters == NULL);
+
+        sphactor_t *senderact = sphactor_new(api_sphactor, NULL, NULL, NULL);
+        assert(senderact);
+        rc = sphactor_ask_connect(filteract, sphactor_ask_endpoint(senderact));
+        assert(rc == 0);
+        sphactor_ask_add_filter(filteract, "TEST"); // add a TEST filter
+        sphactor_ask_api(senderact, "SEND", "s", "TESTAPI"); // this one is received
+        sphactor_ask_api(senderact, "SEND", "s", "BLAA"); // this one is not received and triggers an assert if it was
+
+        zclock_sleep(10); // give some time for messages to travel
+        sphactor_report_t *rep = sphactor_report(filteract);
+        assert(sphactor_report_recv_time(rep) > 0); // recv time should be > 0 if we received something
+
+        sphactor_destroy(&filteract);
+        sphactor_destroy(&senderact);
+    }
 
     zsys_shutdown();  //  needed by Windows: https://github.com/zeromq/czmq/issues/1751
     //  @end

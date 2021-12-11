@@ -38,6 +38,25 @@
         <return type = "integer" />
     </method>
 
+    <method name = "filters">
+        Return the list of filters on the incoming subscribe socket.
+        Will return NULL if there are no filters.
+        <return type = "zlist" />
+    </method>
+    
+    <method name = "filter add">
+        Add a filter to the incoming subscribe socket. You can add multiple filters. 
+        Data will pass if at least one filter matches the data. Filters are 
+        performed bitwise! See ZeroMQ subscribe documentation for details.
+        <argument name = "filter" type = "string" />
+    </method>
+
+    <method name = "filter remove">
+        Remove a filter from the incoming subscribe socket. Will do nothing if
+        the filter does not exists.
+        <argument name = "filter" type = "string" />
+    </method>
+
     <method name = "uuid">
         Return our sphactor_actor's UUID string
 

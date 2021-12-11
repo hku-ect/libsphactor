@@ -143,6 +143,23 @@
         <return type = "integer" />
     </method>
 
+    <method name = "ask filters">
+        Return a list of filters on the incoming socket.
+        Will return NULL if there are no filters.
+        <return type = "zlist" />
+    </method>
+
+    <method name = "ask add filter">
+        Add a filter to the incoming socket. You can add multiple filters. Data will pass if 
+        at least one filter matches the data. Filters are performed bitwise!
+        <argument name = "filter" type = "string" />
+    </method>
+
+    <method name = "ask remove filter">
+        Remove a filter from the incoming socket.
+        <argument name = "filter" type = "string" />
+    </method>
+
     <method name = "connections">
         Return the list of connections of this actor.
         <return type  = "zlist" />

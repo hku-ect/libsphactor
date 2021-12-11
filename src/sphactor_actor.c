@@ -44,6 +44,7 @@ struct _sphactor_actor_t {
     char        *name;            //  Our name (defaults to first 6 chars of our uuid)
     char        *actor_type;      //  Our actors typename (defaults to NULL)
     zhash_t     *subs;            //  a list of our subscription sockets
+    zlist_t     *sub_filters;     //  list of subscribe filters (native zmq subscribe filters)
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
     int64_t     timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
     int64_t     time_next;        //  timestamp for our next iteration
@@ -83,6 +84,7 @@ sphactor_actor_new (zsock_t *pipe, void *args)
     self->uuid = shim->uuid;
     self->actor_type = NULL;
     self->timeout = -1;
+    self->sub_filters = NULL;
     self->capability = NULL;
     // initialise the status report
     self->iterations = 0;
@@ -197,6 +199,9 @@ sphactor_actor_destroy (sphactor_actor_t **self_p)
         }
         zhash_destroy(&self->subs);
 
+        if (self->sub_filters)
+            zlist_destroy(&self->sub_filters);
+
         if (self->capability)
         {
             zconfig_destroy(&self->capability);
@@ -253,6 +258,58 @@ sphactor_actor_connect (sphactor_actor_t *self, const char *dest)
     int rc = zsock_connect(self->sub, "%s", dest);
     assert(rc == 0);
     return rc;
+}
+
+//  Return the list of filters on the incoming subscribe socket.
+//  Will return NULL if there are no filters.
+zlist_t *
+sphactor_actor_filters (sphactor_actor_t *self)
+{
+    assert(self);
+    return self->sub_filters;
+}
+
+//  Add a filter to the incoming subscribe socket. You can add multiple filters.
+//  Data will pass if at least one filter matches the data. Filters are
+//  performed bitwise! See ZeroMQ subscribe documentation for details.
+void
+sphactor_actor_filter_add (sphactor_actor_t *self, const char *filter)
+{
+    assert(self);
+    assert(filter);
+    if (self->sub_filters == NULL)
+    {
+        // we're adding the first filter so remove the empty filter
+        zsock_set_unsubscribe(self->sub, "");
+        self->sub_filters = zlist_new();
+        zlist_autofree(self->sub_filters);
+        zlist_comparefn (self->sub_filters, (zlist_compare_fn *) strcmp);
+        assert(self->sub_filters);
+    }
+    else if ( zlist_exists(self->sub_filters, filter) ) return;
+
+    zsock_set_subscribe(self->sub, filter);
+
+    int rc = zlist_append(self->sub_filters, filter);
+    assert(rc == 0);
+}
+
+//  Remove a filter from the incoming subscribe socket. Will do nothing if
+//  the filter does not exists.
+void
+sphactor_actor_filter_remove (sphactor_actor_t *self, const char *filter)
+{
+    assert(self);
+    assert(filter);
+    if (self->sub_filters == NULL ) return;
+    zlist_remove(self->sub_filters, filter);
+    if (zlist_size(self->sub_filters) == 0)
+    {
+        // no more filter so add empty filter so no messages are blocked
+        zsock_set_subscribe(self->sub, "");
+        zlist_destroy(&self->sub_filters);
+        assert(self->sub_filters == NULL);
+    }
 }
 
 
@@ -421,6 +478,43 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         zstr_sendm (self->pipe, dest);
         zstr_sendf (self->pipe, "%i", rc);
         zstr_free(&dest);
+    }
+    else
+    if (streq (command, "FILTERS"))
+    {
+        zlist_t *filters = sphactor_actor_filters(self);
+        zmsg_t *ret = zmsg_new();
+        if (filters)
+        {
+            char *f = zlist_first(filters);
+            while(f != NULL)
+            {
+                zmsg_addstr(ret, f);
+                f = zlist_next(filters);
+            }
+        }
+        else
+        {
+            zframe_t *f = zframe_new_empty();
+            zmsg_append(ret, &f);
+        }
+        zmsg_send(&ret, self->pipe);
+    }
+    else
+    if (streq (command, "FILTER ADD"))
+    {
+        char *filter = zmsg_popstr (request);
+        assert(filter);
+        sphactor_actor_filter_add(self, filter);
+        zstr_free(&filter);
+    }
+    else
+    if (streq (command, "FILTER REMOVE"))
+    {
+        char *filter = zmsg_popstr (request);
+        assert(filter);
+        sphactor_actor_filter_remove(self, filter);
+        zstr_free(&filter);
     }
     else
     if (streq (command, "UUID"))
