@@ -286,11 +286,11 @@ sphactor_actor_filter_add (sphactor_actor_t *self, const char *filter)
         zlist_comparefn (self->sub_filters, (zlist_compare_fn *) strcmp);
         assert(self->sub_filters);
     }
-    else if ( zlist_exists(self->sub_filters, filter) ) return;
+    else if ( zlist_exists(self->sub_filters, (void *)filter) ) return;
 
     zsock_set_subscribe(self->sub, filter);
 
-    int rc = zlist_append(self->sub_filters, filter);
+    int rc = zlist_append(self->sub_filters, (void *)filter);
     assert(rc == 0);
 }
 
@@ -302,7 +302,7 @@ sphactor_actor_filter_remove (sphactor_actor_t *self, const char *filter)
     assert(self);
     assert(filter);
     if (self->sub_filters == NULL ) return;
-    zlist_remove(self->sub_filters, filter);
+    zlist_remove(self->sub_filters, (void *)filter);
     if (zlist_size(self->sub_filters) == 0)
     {
         // no more filter so add empty filter so no messages are blocked
@@ -486,11 +486,11 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         zmsg_t *ret = zmsg_new();
         if (filters)
         {
-            char *f = zlist_first(filters);
+            char *f = (char *)zlist_first(filters);
             while(f != NULL)
             {
                 zmsg_addstr(ret, f);
-                f = zlist_next(filters);
+                f = (char *)zlist_next(filters);
             }
         }
         else

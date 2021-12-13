@@ -1510,7 +1510,7 @@ sphactor_test (bool verbose)
         filters = sphactor_ask_filters(filteract);
         assert(filters != NULL);
         assert(zlist_size(filters) == 1);
-        char *filter = zlist_first(filters);
+        char *filter = (char *)zlist_first(filters);
         assert( streq(filter, "test") );
         zlist_destroy(&filters);
         assert(filters == NULL);
