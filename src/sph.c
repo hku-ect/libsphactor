@@ -116,8 +116,13 @@ s_run_actor_by_type(const char *actor_type, zsock_t *pipe, const char *name, zuu
         instance = funcs->constructor(funcs->constructor_args);
 
     sphactor_shim_t shim = { funcs->handler, instance, uuid, name };
+    sphactor_actor_t *act = sphactor_actor_new(pipe, (void *)&shim);
+    sphactor_actor_start(act);
     // this will block until finished
-    sphactor_actor_run(pipe, &shim);
+    while (!zsys_interrupted)
+    {
+        sphactor_actor_run_once(act);
+    }
     return 0;
 }
 
