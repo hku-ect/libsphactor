@@ -54,6 +54,22 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_actor_disconnect (sphactor_actor_t *self, const char *dest);
 
+//  Return the list of filters on the incoming subscribe socket.
+//  Will return NULL if there are no filters.
+SPHACTOR_EXPORT zlist_t *
+    sphactor_actor_filters (sphactor_actor_t *self);
+
+//  Add a filter to the incoming subscribe socket. You can add multiple filters.
+//  Data will pass if at least one filter matches the data. Filters are
+//  performed bitwise! See ZeroMQ subscribe documentation for details.
+SPHACTOR_EXPORT void
+    sphactor_actor_filter_add (sphactor_actor_t *self, const char *filter);
+
+//  Remove a filter from the incoming subscribe socket. Will do nothing if
+//  the filter does not exists.
+SPHACTOR_EXPORT void
+    sphactor_actor_filter_remove (sphactor_actor_t *self, const char *filter);
+
 //  Return our sphactor_actor's UUID string
 //
 //  Note: sphactor_actor methods can only be called from within its instance!

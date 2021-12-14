@@ -138,6 +138,20 @@ SPHACTOR_EXPORT int
 SPHACTOR_EXPORT int
     sphactor_ask_disconnect (sphactor_t *self, const char *endpoint);
 
+//  Return a list of filters on the incoming socket.
+//  Will return NULL if there are no filters.
+SPHACTOR_EXPORT zlist_t *
+    sphactor_ask_filters (sphactor_t *self);
+
+//  Add a filter to the incoming socket. You can add multiple filters. Data will pass if
+//  at least one filter matches the data. Filters are performed bitwise!
+SPHACTOR_EXPORT void
+    sphactor_ask_add_filter (sphactor_t *self, const char *filter);
+
+//  Remove a filter from the incoming socket.
+SPHACTOR_EXPORT void
+    sphactor_ask_remove_filter (sphactor_t *self, const char *filter);
+
 //  Return the list of connections of this actor.
 SPHACTOR_EXPORT zlist_t *
     sphactor_connections (sphactor_t *self);
