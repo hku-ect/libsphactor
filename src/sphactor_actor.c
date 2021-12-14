@@ -47,6 +47,7 @@ struct _sphactor_actor_t {
     zloop_t     *loop;            //  perhaps we'll use zloop instead of poller
     int64_t     timeout;          //  timeout to wait on polling. Indirect rate for calling the handler
     int64_t     time_next;        //  timestamp for our next iteration
+    int64_t     time_till_next;   //  time till our next iteration
     sphactor_handler_fn *handler; //  the handler to call on events
     void        *handler_args;    //  the arguments to the handler
     uint64_t    iterations;       //  number of iterations (cycles) performed
@@ -222,8 +223,24 @@ int
 sphactor_actor_start (sphactor_actor_t *self)
 {
     assert (self);
+    //  Signal actor successfully initiated
+    zsock_signal (self->pipe, 0);
+    //  Signal handler we're initiated
+    sphactor_event_t ev = { NULL, "INIT", self->name, zuuid_str(self->uuid), self };
+    if ( self->handler)
+    {
+        zmsg_t *initretmsg = self->handler(&ev, self->handler_args);
+        if (initretmsg) zmsg_destroy(&initretmsg);
+    }
 
-    //  TODO: Add startup actions
+    // TODO: this should run on start so timed trigger always run at start
+    self->time_till_next = self->timeout;
+    self->time_next = zclock_mono() + self->timeout;
+    if ( self->timeout == -1)
+    {
+        self->time_till_next = -1;
+        self->time_next = INT64_MAX;
+    }
 
     return 0;
 }
@@ -235,8 +252,22 @@ int
 sphactor_actor_stop (sphactor_actor_t *self)
 {
     assert (self);
+    // signal our handler we're stopping
+    if ( self->handler)
+    {
+        sphactor_event_t ev = { NULL, "STOP", self->name, zuuid_str(self->uuid), self };
 
-    //  TODO: Add shutdown actions
+        self->status = SPHACTOR_REPORT_STOP;
+        if ( self->reporting )
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                             self->iterations,
+                                                                             self->recv_time,
+                                                                             self->send_time,
+                                                                             zosc_dup(self->reportMsg)));
+
+        zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
+        if (destrretmsg) zmsg_destroy(&destrretmsg);
+    }
 
     return 0;
 }
@@ -725,174 +756,114 @@ sph_actor_pollertest(sphactor_event_t *ev, void *args)
     return NULL;
 }
 
-//  --------------------------------------------------------------------------
-//  This is the actor which runs in its own thread.
-
-void
-sphactor_actor_run (zsock_t *pipe, void *args)
+int
+sphactor_actor_run_once(sphactor_actor_t *self)
 {
-    if ( !args )
+    //  determine poller timeout
+    if ( zclock_mono() > self->time_next )
     {
-        // as a test for now
-        sphactor_shim_t consumer = { &sph_actor_consumer, NULL, NULL, NULL };
-        args = (void *)&consumer;
+        zsys_warning("sphactor_actor: %s, is falling behind! Consider decreasing it's rate if this happens often", self->name);
+        self->time_till_next = 0;
     }
-    sphactor_actor_t *self = sphactor_actor_new (pipe, args);
-    if (!self)
-        return;          //  Interrupted
-
-    //  Signal actor successfully initiated
-    zsock_signal (self->pipe, 0);
-    //  Signal handler we're initiated
-    sphactor_event_t ev = { NULL, "INIT", self->name, zuuid_str(self->uuid), self };
-    if ( self->handler)
+    else
     {
-        zmsg_t *initretmsg = self->handler(&ev, self->handler_args);
-        if (initretmsg) zmsg_destroy(&initretmsg);
-    }
-
-    // TODO: this should run on start so timed trigger always run at start
-    int64_t time_till_next = self->timeout;
-    self->time_next = zclock_mono() + self->timeout;
-    if ( self->timeout == -1)
-    {
-        time_till_next = -1;
-        self->time_next = INT64_MAX;
+        self->time_till_next = self->time_next - zclock_mono();
+        // if time_till_next will be 0 the poller we return immediatelly
+        // so we only set a report when that is not the case
+        self->status = SPHACTOR_REPORT_IDLE;
+        if ( self->reporting )
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                             self->iterations,
+                                                                             self->recv_time,
+                                                                             self->send_time,
+                                                                             zosc_dup(self->reportMsg)));
     }
 
-    while (!self->terminated) {
-        //  determine poller timeout
-        if ( zclock_mono() > self->time_next )
-        {
-            zsys_warning("sphactor_actor: %s, is falling behind! Consider decreasing it's rate if this happens often", self->name);
-            time_till_next = 0;
+
+    void *which = (void *) zpoller_wait (self->poller, (int)self->time_till_next );
+
+    bool skipped = ( self->time_next - zclock_mono() <= 0 );
+    if ( self->timeout > 0 ) {
+        while( self->time_next <= zclock_mono() ) {
+            self->time_next += self->timeout;
         }
-        else
+    }
+
+    if ( which == NULL || skipped ) {  // timer events
+        //  timed events don't carry a message instead NULL is passed
+        //  update our status report 5=TIME
+        self->status = SPHACTOR_REPORT_TIME;
+        if ( self->reporting )
+            sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                             self->iterations,
+                                                                             self->recv_time,
+                                                                             self->send_time,
+                                                                             zosc_dup(self->reportMsg)));
+
+        // do we have a handler? TODO: we should never have a NULL handler???
+        if ( self->handler )
         {
-            time_till_next = self->time_next - zclock_mono();
-            // if time_till_next will be 0 the poller we return immediatelly
-            // so we only set a report when that is not the case
-            self->status = SPHACTOR_REPORT_IDLE;
+            sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
+            {
+                // publish the msg
+                s_publish_msg(self, retmsg);
+
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL ) {
+                    zmsg_destroy(&retmsg);
+                }
+            }
+        }
+    }
+    else if ( zsock_is(which) )  // zsock events
+    {
+        if (which == self->pipe)
+        {
+            //  update our status report 7=API
+            self->status = SPHACTOR_REPORT_API;
             if ( self->reporting )
                 sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
                                                                                  self->iterations,
                                                                                  self->recv_time,
                                                                                  self->send_time,
                                                                                  zosc_dup(self->reportMsg)));
+            sphactor_actor_recv_api (self);
         }
-
-
-        void *which = (void *) zpoller_wait (self->poller, (int)time_till_next );
-
-        bool skipped = ( self->time_next - zclock_mono() <= 0 );
-        if ( self->timeout > 0 ) {
-            while( self->time_next <= zclock_mono() ) {
-                self->time_next += self->timeout;
+        //  if a sub socket then process actor
+        else if ( which == self->sub ) {
+            zmsg_t *msg = zmsg_recv(which);
+            if (!msg)
+            {
+                return -1; //  interrupted
             }
-        }
-
-        if ( which == NULL || skipped ) {  // timer events
-            //  timed events don't carry a message instead NULL is passed
-            //  update our status report 5=TIME
-            self->status = SPHACTOR_REPORT_TIME;
+            // TODO: think this through
+            //  update our status report 4=SOCK
+            self->status = SPHACTOR_REPORT_SOCK;
             if ( self->reporting )
+                self->recv_time = zclock_mono();
                 sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
                                                                                  self->iterations,
                                                                                  self->recv_time,
                                                                                  self->send_time,
                                                                                  zosc_dup(self->reportMsg)));
 
-            // do we have a handler? TODO: we should never have a NULL handler???
-            if ( self->handler )
+            sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
+            zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+            if (retmsg)
             {
-                sphactor_event_t ev = { NULL, "TIME", self->name, zuuid_str(self->uuid), self };
-                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-                if (retmsg)
-                {
-                    // publish the msg
-                    s_publish_msg(self, retmsg);
+                // publish the msg
+                s_publish_msg(self, retmsg);
 
-                    // delete message if we have no connections (otherwise it leaks)
-                    if ( zsock_endpoint(self->pub) == NULL ) {
-                        zmsg_destroy(&retmsg);
-                    }
-                }
+                // delete message if we have no connections (otherwise it leaks)
+                if ( zsock_endpoint(self->pub) == NULL )
+                    zmsg_destroy(&retmsg);
             }
         }
-        else if ( zsock_is(which) )  // zsock events
+        else  // custom zsock event (FDSOCK)
         {
-            if (which == self->pipe)
-            {
-                //  update our status report 7=API
-                self->status = SPHACTOR_REPORT_API;
-                if ( self->reporting )
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
-                                                                                     self->iterations,
-                                                                                     self->recv_time,
-                                                                                     self->send_time,
-                                                                                     zosc_dup(self->reportMsg)));
-                sphactor_actor_recv_api (self);
-            }
-            //  if a sub socket then process actor
-            else if ( which == self->sub ) {
-                zmsg_t *msg = zmsg_recv(which);
-                if (!msg)
-                {
-                    break; //  interrupted
-                }
-                // TODO: think this through
-                //  update our status report 4=SOCK
-                self->status = SPHACTOR_REPORT_SOCK;
-                if ( self->reporting )
-                    self->recv_time = zclock_mono();
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
-                                                                                     self->iterations,
-                                                                                     self->recv_time,
-                                                                                     self->send_time,
-                                                                                     zosc_dup(self->reportMsg)));
-
-                sphactor_event_t ev = { msg, "SOCK", self->name, zuuid_str(self->uuid), self };
-                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-                if (retmsg)
-                {
-                    // publish the msg
-                    s_publish_msg(self, retmsg);
-
-                    // delete message if we have no connections (otherwise it leaks)
-                    if ( zsock_endpoint(self->pub) == NULL )
-                        zmsg_destroy(&retmsg);
-                }
-            }
-            else  // custom zsock event (FDSOCK)
-            {
-                // it is a socket so let's try our added sockets by passing them to the handler
-                //  update our status report 6=FDSOCK
-                self->status = SPHACTOR_REPORT_FDSOCK;
-                if ( self->reporting )
-                    // TODO: should we set recv time? Or do we do this only on the sub socket?
-                    sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
-                                                                                     self->iterations,
-                                                                                     self->recv_time,
-                                                                                     self->send_time,
-                                                                                     zosc_dup(self->reportMsg)));
-
-                zmsg_t *sockfdm = zmsg_new();
-                zmsg_addmem(sockfdm, &which, sizeof( void *));
-                sphactor_event_t ev = { sockfdm, "FDSOCK", self->name, zuuid_str(self->uuid), self };
-                zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-                if (retmsg)
-                {
-                    // publish the msg
-                    s_publish_msg(self, retmsg);
-
-                    // delete message if we have no connections (otherwise it leaks)
-                    if ( zsock_endpoint(self->pub) == NULL )
-                        zmsg_destroy(&retmsg);
-                }
-            }
-        }
-        else  { // custom filedescriptor events
-            // it must be a filedescriptor so let's try our added sockets by passing this to the handler
+            // it is a socket so let's try our added sockets by passing them to the handler
             //  update our status report 6=FDSOCK
             self->status = SPHACTOR_REPORT_FDSOCK;
             if ( self->reporting )
@@ -917,28 +888,59 @@ sphactor_actor_run (zsock_t *pipe, void *args)
                     zmsg_destroy(&retmsg);
             }
         }
-        self->iterations++;
     }
-    // signal our handler we're stopping
-    if ( self->handler)
-    {
-        ev.msg = NULL;
-        ev.type = "STOP";
-        ev.name = self->name;
-        ev.uuid = zuuid_str(self->uuid);
-        ev.actor = self;
-
-        self->status = SPHACTOR_REPORT_STOP;
+    else  { // custom filedescriptor events
+        // it must be a filedescriptor so let's try our added sockets by passing this to the handler
+        //  update our status report 6=FDSOCK
+        self->status = SPHACTOR_REPORT_FDSOCK;
         if ( self->reporting )
+            // TODO: should we set recv time? Or do we do this only on the sub socket?
             sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
                                                                              self->iterations,
                                                                              self->recv_time,
                                                                              self->send_time,
                                                                              zosc_dup(self->reportMsg)));
 
-        zmsg_t *destrretmsg = self->handler(&ev, self->handler_args);
-        if (destrretmsg) zmsg_destroy(&destrretmsg);
+        zmsg_t *sockfdm = zmsg_new();
+        zmsg_addmem(sockfdm, &which, sizeof( void *));
+        sphactor_event_t ev = { sockfdm, "FDSOCK", self->name, zuuid_str(self->uuid), self };
+        zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+        if (retmsg)
+        {
+            // publish the msg
+            s_publish_msg(self, retmsg);
+
+            // delete message if we have no connections (otherwise it leaks)
+            if ( zsock_endpoint(self->pub) == NULL )
+                zmsg_destroy(&retmsg);
+        }
     }
+    self->iterations++;
+}
+
+//  --------------------------------------------------------------------------
+//  This is the actor which runs in its own thread.
+
+void
+sphactor_actor_run (zsock_t *pipe, void *args)
+{
+    if ( !args )
+    {
+        // as a test for now
+        sphactor_shim_t consumer = { &sph_actor_consumer, NULL, NULL, NULL };
+        args = (void *)&consumer;
+    }
+    sphactor_actor_t *self = sphactor_actor_new (pipe, args);
+    if (!self)
+        return;          //  Interrupted
+
+    sphactor_actor_start(self);
+
+    while (!self->terminated) {
+        if ( sphactor_actor_run_once(self) == -1 )
+            break;
+    }
+    sphactor_actor_stop(self);
     sphactor_actor_destroy (&self);
 }
 
