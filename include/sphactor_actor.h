@@ -109,6 +109,11 @@ SPHACTOR_EXPORT sphactor_report_t *
 SPHACTOR_EXPORT void
     sphactor_actor_set_custom_report_data (sphactor_actor_t *self, zosc_t *message);
 
+//  Run a single iteration of the actor. This method is only for advanced use, e.g. running an actor
+//  alongside something else.
+SPHACTOR_EXPORT int
+    sphactor_actor_run_once (sphactor_actor_t *self);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_actor_test (bool verbose);
