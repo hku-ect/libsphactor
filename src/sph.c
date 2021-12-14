@@ -123,6 +123,8 @@ s_run_actor_by_type(const char *actor_type, zsock_t *pipe, const char *name, zuu
     {
         sphactor_actor_run_once(act);
     }
+    sphactor_actor_stop(act);
+    sphactor_actor_destroy (&act);
     return 0;
 }
 
