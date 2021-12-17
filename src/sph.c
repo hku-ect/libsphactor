@@ -169,9 +169,8 @@ int main (int argc, char *argv [])
 
         const char *conffile = zargs_first(args);
 
-        sph_stage_t *stage = sph_stage_new("clistage");
-        sph_stage_load(stage, conffile);
-
+        sph_stage_t *stage = sph_stage_load(conffile);
+        assert(stage);
         while (!zsys_interrupted)
         {
             zclock_sleep(300);

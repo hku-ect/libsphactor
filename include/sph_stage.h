@@ -28,14 +28,14 @@ extern "C" {
 SPHACTOR_EXPORT sph_stage_t *
     sph_stage_new (const char *stage_name);
 
+//  Load a new stage from a stage config filepath.
+//  Returns NULL on failure.
+SPHACTOR_EXPORT sph_stage_t *
+    sph_stage_load (const char *config_path);
+
 //  Destructor, destroys a Sphactor stage and its actors.
 SPHACTOR_EXPORT void
     sph_stage_destroy (sph_stage_t **self_p);
-
-//  Load the stage from a stage config filepath.
-//  Return -1 on failure or the number of actors sucessfully loaded.
-SPHACTOR_EXPORT int
-    sph_stage_load (sph_stage_t *self, const char *config_path);
 
 //  Save the stage to the active config filepath.
 //  Return -1 on failure or 0 on success.
