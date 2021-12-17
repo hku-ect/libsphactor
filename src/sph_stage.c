@@ -20,7 +20,9 @@
 */
 
 #include "sphactor_classes.h"
-
+#ifdef __UNIX__
+#include <libgen.h>
+#endif
 //  Structure of our class
 
 struct _sph_stage_t {
@@ -139,21 +141,55 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
     return zhash_size(self->actors);
 }
 
-int
-sph_stage_load(sph_stage_t *self, const char *config_path)
+static int
+s_validate_stage_config(zconfig_t *config_path)
 {
-    assert(self);
+    // a stage must contain a name and version number
+    // returns 0 if sucessful -1 on fail and echoing errors
+
+    return 0;
+}
+
+sph_stage_t *
+sph_stage_load(const char *config_path)
+{
     assert(config_path);
     self->config_path = strdup(config_path);
     zconfig_t* root = zconfig_load(config_path);
     if ( root == NULL )
     {
         zsys_error("Error loading %s", config_path);
-        return -1;
+        return NULL;
     }
-    int rc = sph_stage_cnf_load(self, root);
+    sph_stage_t *self = NULL;
+    if ( s_validate_stage_config(root) )
+    {
+        // set working directory to stage config path
+#ifdef __WINDOWS__
+//        WINPATHCCHAPI HRESULT PathCchRemoveFileSpec(
+//          [in, out] PWSTR  pszPath,
+//          [in]      size_t cchPath
+//        );
+        char dir_path[_MAX_DIR];
+        char fname[_MAX_FNAME];
+        _splitpath( self->config_path, NULL, dir, fname, NULL );
+        _chdir(dir_path);
+        self = sph_stage_new(fname);
+#else
+        char *pathd = strdup(self->config_path);
+        char *dir_path = dirname(pathd);
+        chdir(dir_path);
+        zstr_free(&pathd);
+
+        char *pathf = strdup(self->config_path);
+        self = sph_stage_new(basename(pathf));
+        zstr_free(&pathf);
+#endif
+        assert(self);
+        int rc = sph_stage_cnf_load(self, root);
+    }
     zconfig_destroy(&root);
-    return rc;
+    return self;
 }
 
 int

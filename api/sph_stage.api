@@ -9,11 +9,10 @@
         Destructor, destroys a Sphactor stage and its actors. 
     </destructor>
 
-    <method name = "load">
-        Load the stage from a stage config filepath.
-        Return -1 on failure or the number of actors sucessfully loaded.
+    <constructor name = "load">
+        Load a new stage from a stage config filepath.
+        Returns NULL on failure.
         <argument name = "config path" type = "string" />
-        <return type = "integer"/>
     </method>
 
     <method name = "save">
