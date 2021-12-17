@@ -141,20 +141,19 @@ sph_stage_cnf_load(sph_stage_t *self, const zconfig_t *cnf)
     return zhash_size(self->actors);
 }
 
-static int
+static bool
 s_validate_stage_config(zconfig_t *config_path)
 {
-    // a stage must contain a name and version number
-    // returns 0 if sucessful -1 on fail and echoing errors
+    // TODO a stage must contain a name and version number
+    // returns 0 if sucessfull -1 on fail and echoing errors
 
-    return 0;
+    return true;
 }
 
 sph_stage_t *
 sph_stage_load(const char *config_path)
 {
     assert(config_path);
-    self->config_path = strdup(config_path);
     zconfig_t* root = zconfig_load(config_path);
     if ( root == NULL )
     {
@@ -176,16 +175,17 @@ sph_stage_load(const char *config_path)
         _chdir(dir_path);
         self = sph_stage_new(fname);
 #else
-        char *pathd = strdup(self->config_path);
+        char *pathd = strdup(config_path);
         char *dir_path = dirname(pathd);
         chdir(dir_path);
         zstr_free(&pathd);
 
-        char *pathf = strdup(self->config_path);
+        char *pathf = strdup(config_path);
         self = sph_stage_new(basename(pathf));
         zstr_free(&pathf);
 #endif
         assert(self);
+        self->config_path = strdup(config_path);
         int rc = sph_stage_cnf_load(self, root);
     }
     zconfig_destroy(&root);
