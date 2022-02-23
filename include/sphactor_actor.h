@@ -82,6 +82,12 @@ SPHACTOR_EXPORT zuuid_t *
 SPHACTOR_EXPORT const char *
     sphactor_actor_name (sphactor_actor_t *self);
 
+//  Return the timeout (ms) of the sphactor_actor.
+//
+//  Note: sphactor_actor methods can only be called from within its instance!
+SPHACTOR_EXPORT int64_t
+    sphactor_actor_timeout (sphactor_actor_t *self);
+
 //  Set the timeout for the polling of the sphactor_actor.
 //
 //  Note: sphactor_actor methods can only be called from within its instance!
