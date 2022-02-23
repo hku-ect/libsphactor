@@ -377,6 +377,13 @@ sphactor_actor_name (sphactor_actor_t *self)
     return self->name;
 }
 
+int64_t
+sphactor_actor_timeout (sphactor_actor_t *self)
+{
+    assert(self);
+    return self->timeout = timeout;
+}
+
 void
 sphactor_actor_set_timeout (sphactor_actor_t *self, int64_t timeout)
 {
