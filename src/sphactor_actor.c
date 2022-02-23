@@ -381,7 +381,7 @@ int64_t
 sphactor_actor_timeout (sphactor_actor_t *self)
 {
     assert(self);
-    return self->timeout = timeout;
+    return self->timeout;
 }
 
 void
