@@ -71,6 +71,13 @@
         <return type = "string" />
     </method>
 
+    <method name = "timeout">
+        Return the timeout (ms) of the sphactor_actor. 
+
+        Note: sphactor_actor methods can only be called from within its instance!
+        <return type = "msecs" />
+    </method>
+
     <method name = "set timeout">
         Set the timeout for the polling of the sphactor_actor. 
 
