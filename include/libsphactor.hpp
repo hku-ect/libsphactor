@@ -4,7 +4,7 @@
 #include "libsphactor.h"
 
 template<class SphactorClass>
-SPHACTOR_EXPORT static zmsg_t *
+static zmsg_t *
 sphactor_member_handler(sphactor_event_t *ev, void *args)
 {
     assert(args);
@@ -13,21 +13,21 @@ sphactor_member_handler(sphactor_event_t *ev, void *args)
 };
 
 template<class SphactorClass>
-SPHACTOR_EXPORT static void *
+static void *
 sphactor_cpp_constructor(void *arg)
 {
     return new SphactorClass();
 };
 
 template<class SphactorClass>
-SPHACTOR_EXPORT static void *
+static void *
 sphactor_cpp_arg_constructor(void *arg)
 {
     return new SphactorClass(arg);
 };
 
 template<class SphactorClass>
-SPHACTOR_EXPORT int
+int
 sphactor_register (const char *actor_type, const char *capability)
 {
     if (capability)
@@ -36,7 +36,7 @@ sphactor_register (const char *actor_type, const char *capability)
 }
 
 template<class SphactorClass>
-SPHACTOR_EXPORT int
+int
 sphactor_register (const char *actor_type, const char *capability, void *constructor_arg)
 {
     if (capability)
