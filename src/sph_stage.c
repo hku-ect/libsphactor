@@ -171,7 +171,7 @@ sph_stage_load(const char *config_path)
 //        );
         char dir_path[_MAX_DIR];
         char fname[_MAX_FNAME];
-        _splitpath( self->config_path, NULL, dir_path, fname, NULL );
+        _splitpath( config_path, NULL, dir_path, fname, NULL );
         _chdir(dir_path);
         self = sph_stage_new(fname);
 #else
