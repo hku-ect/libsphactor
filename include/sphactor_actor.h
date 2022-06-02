@@ -136,6 +136,11 @@ SPHACTOR_EXPORT void
 SPHACTOR_EXPORT int
     sphactor_actor_run_once (sphactor_actor_t *self);
 
+//  Send a message through the actor's output socket.
+//  N.B. the supplied message will be destroyed!
+SPHACTOR_EXPORT int
+    sphactor_actor_send (sphactor_actor_t *self, zmsg_t *message);
+
 //  Self test of this class.
 SPHACTOR_EXPORT void
     sphactor_actor_test (bool verbose);

@@ -858,6 +858,14 @@ sph_actor_pollertest(sphactor_event_t *ev, void *args)
 }
 
 int
+sphactor_actor_send(sphactor_actor_t *self, zmsg_t *message)
+{
+    assert(self);
+    assert(message);
+    return s_publish_msg(self, message);
+}
+
+int
 sphactor_actor_run_once(sphactor_actor_t *self)
 {
     //  determine poller timeout
