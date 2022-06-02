@@ -138,4 +138,11 @@
         <return type = "integer" />
     </method>
 
+    <method name = "send">
+        Send a message through the actor's output socket. 
+        N.B. the supplied message will be destroyed!
+        <argument name = "message" type = "zmsg" />
+        <return type = "integer" />
+    </method>
+
 </class>
