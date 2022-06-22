@@ -606,7 +606,11 @@ sphactor_ask_api(sphactor_t *self, const char *api_call, const char *api_format,
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, atoi(value));
             } break;
             case 'f': {
-                rc = zsock_send( sphactor_socket(self), fmt, api_call, atof(value));
+                // this is a workaround for supporting floats, 
+                // we change the 'f' value in fmt to 's'
+                // float is send as a string
+                fmt[1] = 's';
+                rc = zsock_send( sphactor_socket(self), fmt, api_call, value);
             } break;
             case 's': {
                 rc = zsock_send( sphactor_socket(self), fmt, api_call, value);
