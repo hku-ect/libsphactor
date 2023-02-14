@@ -898,7 +898,10 @@ sphactor_actor_run_once(sphactor_actor_t *self)
         }
     }
 
-    if ( which == NULL || skipped ) {  // timer events
+    if ( which == NULL || skipped ) {  // timer events and interrupted
+        if ( zsys_is_interrupted() )
+            return -1; // exiting
+
         //  timed events don't carry a message instead NULL is passed
         //  update our status report 5=TIME
         self->status = SPHACTOR_REPORT_TIME;
