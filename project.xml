@@ -17,7 +17,6 @@
     <class name = "sphactor_report" />
     <class name = "sph stage" />
     <class name = "sph stock" />
-    <target name = "travis" />
     <target name = "vs2015" />
     <!-- Command-line utilities -->
     <main name = "sph" />
