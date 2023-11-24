@@ -486,7 +486,7 @@ s_sphactor_actor_is_api_msg( zmsg_t *msg)
 }
 
 //  Here we handle incoming (API) messages from the pipe from the controller (main thread)
-static void
+static zmsg_t *
 sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
 {
     //  update our status report 7=API
@@ -497,6 +497,7 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
                                                                            self->recv_time,
                                                                            self->send_time,
                                                                            zosc_dup(self->reportMsg)));
+    zmsg_t *retmsg = NULL; // our message to return
     char *command = zmsg_popstr (request);
     if (self->verbose ) zsys_info("command: %s", command);
     if (streq (command, "START"))
@@ -509,8 +510,8 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     {
         // Danger: this method will send the 'self' pointer
         // over the pipe, internal use only!
-        int rc = zsock_send( self->pipe, "p", self);
-        assert( rc == 0 );
+        retmsg = zmsg_new();
+        zmsg_addmem(retmsg, &self, sizeof(void *));
     }
     else
     if (streq (command, "CONNECT"))
@@ -518,9 +519,10 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
         char *dest = zmsg_popstr (request);
         int rc = sphactor_actor_connect (self, dest);
         assert( rc == 0 );
-        zstr_sendm (self->pipe, "CONNECTED");
-        zstr_sendm (self->pipe, dest);
-        zstr_sendf (self->pipe, "%i", rc);
+        retmsg = zmsg_new();
+        zmsg_addstr(retmsg, "CONNECTED");
+        zmsg_addstr(retmsg, dest);
+        zmsg_addstrf(retmsg, "%i", rc);
         zstr_free(&dest);
     }
     else
@@ -528,31 +530,31 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     {
         char *dest = zmsg_popstr (request);
         int rc = sphactor_actor_disconnect (self, dest);
-        zstr_sendm (self->pipe, "DISCONNECTED");
-        zstr_sendm (self->pipe, dest);
-        zstr_sendf (self->pipe, "%i", rc);
+        retmsg = zmsg_new();
+        zmsg_addstr(retmsg, "DISCONNECTED");
+        zmsg_addstr(retmsg, dest);
+        zmsg_addstrf(retmsg, "%i", rc);
         zstr_free(&dest);
     }
     else
     if (streq (command, "FILTERS"))
     {
         zlist_t *filters = sphactor_actor_filters(self);
-        zmsg_t *ret = zmsg_new();
+        retmsg = zmsg_new();
         if (filters)
         {
             char *f = (char *)zlist_first(filters);
             while(f != NULL)
             {
-                zmsg_addstr(ret, f);
+                zmsg_addstr(retmsg, f);
                 f = (char *)zlist_next(filters);
             }
         }
         else
         {
             zframe_t *f = zframe_new_empty();
-            zmsg_append(ret, &f);
+            zmsg_append(retmsg, &f);
         }
-        zmsg_send(&ret, self->pipe);
     }
     else
     if (streq (command, "FILTER ADD"))
@@ -573,17 +575,27 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     else
     if (streq (command, "UUID"))
     {
-        zsock_send(self->pipe, "U", self->uuid);
+        retmsg = zmsg_new();
+        zmsg_addmem (retmsg, zuuid_data (self->uuid), zuuid_size (self->uuid));
     }
     else
     if (streq (command, "NAME"))
-        zstr_send ( self->pipe, self->name );
+    {
+        retmsg = zmsg_new();
+        zmsg_addstr( retmsg, self->name );
+    }
     else
     if (streq (command, "TYPE"))
-        zstr_send ( self->pipe, self->actor_type ? self->actor_type : "" );
+    {
+        retmsg = zmsg_new();
+        zmsg_addstr( retmsg, self->actor_type ? self->actor_type : "" );
+    }
     else
     if (streq (command, "ENDPOINT"))
-        zstr_send ( self->pipe, self->endpoint );
+    {
+        retmsg = zmsg_new();
+        zmsg_addstr( retmsg, self->endpoint );
+    }
     else
     if (streq (command, "SEND"))
     {
@@ -599,13 +611,13 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     if (streq (command, "TRIGGER"))     //  trigger the actor to run its callback
     {
         sphactor_event_t ev = { NULL, "SOCK", self->name, zuuid_str(self->uuid) };
-        zmsg_t *retmsg = self->handler( &ev, self->handler_args);
-        if (retmsg)
+        zmsg_t *pubmsg = self->handler( &ev, self->handler_args);
+        if (pubmsg)
         {
             // publish the msg
-            s_publish_msg(self, retmsg);
+            s_publish_msg(self, pubmsg);
         }
-        zmsg_destroy( &retmsg );
+        zmsg_destroy( &pubmsg );
     }
     else
     if (streq (command, "SET NAME"))
@@ -667,13 +679,17 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     }
     else
     if (streq (command, "TIMEOUT"))
-        zstr_sendf(self->pipe, "%li", self->timeout);
+    {
+        retmsg = zmsg_new();
+        zmsg_addstrf( retmsg, "%li", self->timeout);
+    }
     else
     if (streq (command, "CAPABILITY"))
     {
-        //  we're sending the raw pointer as it is readonly!
-        int rc = zsock_send(self->pipe, "p", self->capability);
-        assert(rc == 0);
+        // Danger: this method will send the 'self' pointer
+        // over the pipe, internal use only!
+        retmsg = zmsg_new();
+        zmsg_addmem(retmsg, &self->capability, sizeof(void *));
     }
     else
     if (streq (command, "$TERM"))
@@ -689,14 +705,9 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
         zstr_free(&command);
         sphactor_event_t ev = { request, "API", self->name, zuuid_str(self->uuid), self };
         zmsg_t *retmsg = self->handler(&ev, self->handler_args);
-        if (retmsg)
-        {
-            // return it over the pipe to our front
-            zmsg_send(&retmsg, self->pipe);
-        }
-        return; // as we cannot destroy the message!
     }
     zstr_free (&command);
+    return retmsg;
 }
 
 
@@ -955,7 +966,10 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 return -1; //  interrupted
             }
 
-            sphactor_actor_recv_api (self, apimsg);
+            zmsg_t *answer = sphactor_actor_recv_api(self, apimsg);
+            if (answer)
+                zmsg_send(&answer, self->pipe);
+
             zmsg_destroy(&apimsg);
         }
         //  if a sub socket then process actor
@@ -971,7 +985,11 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 zframe_t *sigf = zmsg_pop(msg); // pop the signal msg identifier
                 zframe_destroy(&sigf);
                 if ( ! zframe_streq(zmsg_first(msg), "$TERM" ) ) // filter $TERM signal as precaution
-                    sphactor_actor_recv_api(self, msg);
+                {
+                    zmsg_t *answer = sphactor_actor_recv_api(self, msg);
+                    if (answer)
+                        zmsg_send(&answer, self->pub);
+                }
                 zmsg_destroy(&msg);
                 goto run_once_end;
             }
