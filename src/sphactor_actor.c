@@ -471,16 +471,32 @@ void sphactor_actor_set_custom_report_data(sphactor_actor_t *self, zosc_t* messa
         zosc_destroy(&prev);
 }
 
-//  Here we handle incoming (API) messages from the pipe from the controller (main thread)
-
-static void
-sphactor_actor_recv_api (sphactor_actor_t *self)
+// The actor can receive API messages through non pipe sockets
+// these messages have a special zmsg_signal message prepended
+// so we can recognize them
+static int
+s_sphactor_actor_is_api_msg( zmsg_t *msg)
 {
-    //  Get the whole message of the pipe in one go
-    zmsg_t *request = zmsg_recv (self->pipe);
-    if (!request)
-       return;        //  Interrupted
+    // is the message indicating it is an API message?
+    // same as zmsg_signal: https://github.com/zeromq/czmq/blob/899f81985961513c7f4e92aab51f73eff14d42a7/src/zmsg.c#L811
+    int64_t signal_value = *((int64_t *) zframe_data (zmsg_first(msg)));
+    if ((signal_value & 0xFFFFFFFFFFFFFF00L) == 0x7766554433221100L)
+        return signal_value & 255;
+    return -1;
+}
 
+//  Here we handle incoming (API) messages from the pipe from the controller (main thread)
+static void
+sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
+{
+    //  update our status report 7=API
+    self->status = SPHACTOR_REPORT_API;
+    if ( self->reporting )
+        sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
+                                                                           self->iterations,
+                                                                           self->recv_time,
+                                                                           self->send_time,
+                                                                           zosc_dup(self->reportMsg)));
     char *command = zmsg_popstr (request);
     if (self->verbose ) zsys_info("command: %s", command);
     if (streq (command, "START"))
@@ -681,7 +697,6 @@ sphactor_actor_recv_api (sphactor_actor_t *self)
         return; // as we cannot destroy the message!
     }
     zstr_free (&command);
-    zmsg_destroy (&request);
 }
 
 
@@ -933,15 +948,15 @@ sphactor_actor_run_once(sphactor_actor_t *self)
     {
         if (which == self->pipe)
         {
-            //  update our status report 7=API
-            self->status = SPHACTOR_REPORT_API;
-            if ( self->reporting )
-                sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
-                                                                                 self->iterations,
-                                                                                 self->recv_time,
-                                                                                 self->send_time,
-                                                                                 zosc_dup(self->reportMsg)));
-            sphactor_actor_recv_api (self);
+            // our pipe only holds API messages
+            zmsg_t *apimsg = zmsg_recv(which);
+            if (!apimsg)
+            {
+                return -1; //  interrupted
+            }
+
+            sphactor_actor_recv_api (self, apimsg);
+            zmsg_destroy(&apimsg);
         }
         //  if a sub socket then process actor
         else if ( which == self->sub ) {
@@ -950,8 +965,19 @@ sphactor_actor_run_once(sphactor_actor_t *self)
             {
                 return -1; //  interrupted
             }
-            // TODO: think this through
-            //  update our status report 4=SOCK
+            //  we can receive API messages so check this first as these are special messages
+            if ( s_sphactor_actor_is_api_msg(msg) > 0 )
+            {
+                zframe_t *sigf = zmsg_pop(msg); // pop the signal msg identifier
+                zframe_destroy(&sigf);
+                if ( ! zframe_streq(zmsg_first(msg), "$TERM" ) ) // filter $TERM signal as precaution
+                    sphactor_actor_recv_api(self, msg);
+                zmsg_destroy(&msg);
+                goto run_once_end;
+            }
+
+            //  handle the message on the socket
+            //  first update our status report 4=SOCK
             self->status = SPHACTOR_REPORT_SOCK;
             if ( self->reporting )
                 self->recv_time = zclock_mono();
@@ -1027,7 +1053,9 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 zmsg_destroy(&retmsg);
         }
     }
+  run_once_end:
     self->iterations++;
+    return 0;
 }
 
 //  --------------------------------------------------------------------------
