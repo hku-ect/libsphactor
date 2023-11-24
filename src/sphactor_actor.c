@@ -601,7 +601,8 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
     {
         if (zmsg_size(request) > 0 )
         {
-            zmsg_send(&request, self->pub);
+            zmsg_t *dup = zmsg_dup(request);
+            zmsg_send(&dup, self->pub);
         }
         else
             zstr_send ( self->pub, self->name );
