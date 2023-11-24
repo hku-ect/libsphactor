@@ -487,9 +487,11 @@ s_sphactor_actor_is_api_msg( zmsg_t *msg)
 
 //  Here we handle incoming (API) messages from the pipe from the controller (main thread)
 static zmsg_t *
-sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
+sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t **request_p)
 {
     //  update our status report 7=API
+    zmsg_t *request = *request_p;
+    assert(request);
     self->status = SPHACTOR_REPORT_API;
     if ( self->reporting )
         sphactor_actor_atomic_set_report(self, sphactor_report_construct(self->status,
@@ -705,9 +707,11 @@ sphactor_actor_recv_api (sphactor_actor_t *self, zmsg_t *request)
         assert(rc == 0);
         zstr_free(&command);
         sphactor_event_t ev = { request, "API", self->name, zuuid_str(self->uuid), self };
-        zmsg_t *retmsg = self->handler(&ev, self->handler_args);
+        retmsg = self->handler(&ev, self->handler_args); // actor should destroy the message!
+        return retmsg;
     }
     zstr_free (&command);
+    zmsg_destroy(request_p);
     return retmsg;
 }
 
@@ -967,11 +971,9 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 return -1; //  interrupted
             }
 
-            zmsg_t *answer = sphactor_actor_recv_api(self, apimsg);
+            zmsg_t *answer = sphactor_actor_recv_api(self, &apimsg);
             if (answer)
                 zmsg_send(&answer, self->pipe);
-
-            zmsg_destroy(&apimsg);
         }
         //  if a sub socket then process actor
         else if ( which == self->sub ) {
@@ -987,11 +989,10 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 zframe_destroy(&sigf);
                 if ( ! zframe_streq(zmsg_first(msg), "$TERM" ) ) // filter $TERM signal as precaution
                 {
-                    zmsg_t *answer = sphactor_actor_recv_api(self, msg);
+                    zmsg_t *answer = sphactor_actor_recv_api(self, &msg);
                     if (answer)
                         zmsg_send(&answer, self->pub);
                 }
-                zmsg_destroy(&msg);
                 goto run_once_end;
             }
 
