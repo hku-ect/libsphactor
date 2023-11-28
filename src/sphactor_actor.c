@@ -990,8 +990,8 @@ sphactor_actor_run_once(sphactor_actor_t *self)
                 if ( ! zframe_streq(zmsg_first(msg), "$TERM" ) ) // filter $TERM signal as precaution
                 {
                     zmsg_t *answer = sphactor_actor_recv_api(self, &msg);
-                    if (answer)
-                        zmsg_send(&answer, self->pub);
+                    if (answer) // we never answer through the pub socket https://github.com/hku-ect/libsphactor/pull/100#issuecomment-1829326648
+                        zmsg_destroy(&answer); // zmsg_send(&answer, self->pub);
                 }
                 goto run_once_end;
             }
@@ -1175,9 +1175,32 @@ sphactor_actor_test (bool verbose)
     assert( pub);
     zstr_sendm(sphactor_actor, "CONNECT");
     zstr_send(sphactor_actor, "inproc://bla");
-    zclock_sleep(10);
+    // assert connected reply
+    char *answer = zstr_recv(sphactor_actor);
+    assert( streq(answer, "CONNECTED") );
+    zstr_free(&answer);
+    answer = zstr_recv(sphactor_actor);
+    assert( streq(answer, "inproc://bla") );
+    zstr_free(&answer);
+    answer = zstr_recv(sphactor_actor);
+    assert( streq(answer, "0") );
+    zstr_free(&answer);
+
     zstr_sendm(pub, "PING");
     zstr_send(pub, "1");
+    // send an API command through the pub socket, we get no answer ever. Answers only through the pipe
+    // API request are special crafted messages with a zmsg_signal in front
+    zmsg_t *apimsg = zmsg_new_signal(1);
+    zmsg_addstr(apimsg, "SET NAME");
+    zmsg_addstr(apimsg, "PUBAPITEST");
+    zmsg_send(&apimsg, pub);
+    zclock_sleep(10);
+    // now request the name and assert it's right
+    zstr_send(sphactor_actor, "NAME");
+    char *apitestname = zstr_recv(sphactor_actor);
+    assert( streq ( apitestname, "PUBAPITEST" ));
+    zstr_free(&apitestname);
+
     zclock_sleep(10);   //  prevent destroy before ping being handled
 
     // create a producer actor
